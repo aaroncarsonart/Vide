@@ -1,0 +1,119 @@
+package com.atonement.crystals.dnr.vikari.ide.parsing;
+
+import com.atonement.crystals.dnr.vikari.core.identifier.TokenType;
+
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.StyledDocument;
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+public class SyntaxHighlighter {
+    private StyledDocument textDocument;
+    private List<HighlightingRule> highlightingRules;
+
+    public SyntaxHighlighter(StyledDocument textDocument) {
+        this.textDocument = textDocument;
+        this.highlightingRules = initializeHighlightingRules();
+    }
+
+    private List<HighlightingRule> initializeHighlightingRules() {
+        List<HighlightingRule> highlightingRules = new ArrayList<>();
+
+        // TODO: Fix type highlighting for package names between ::
+        // TODO: with lookahead/lookbehinds.
+        highlightingRules.add(new HighlightingRule("Reset", Pattern.compile(".*"), Color.BLACK));
+        highlightingRules.add(new HighlightingRule("Key-value pair", Pattern.compile(Pattern.quote("->")), Colors.BLUE));
+
+        String binaryOperatorsRegex = Arrays.asList(TokenType.MODULUS, TokenType.MULTIPLY, TokenType.LEFT_DIVIDE,
+                        TokenType.ADD, TokenType.SUBTRACT, TokenType.LEFT_ASSIGNMENT, TokenType.LEFT_ADD_ASSIGNMENT,
+                        TokenType.LEFT_SUBTRACT_ASSIGNMENT, TokenType.LEFT_DIVIDE_ASSIGNMENT,
+                        TokenType.LEFT_MULTIPLY_ASSIGNMENT, TokenType.LEFT_LOGICAL_OR_ASSIGNMENT,
+                        TokenType.LEFT_LOGICAL_AND_ASSIGNMENT, TokenType.LOGICAL_AND, TokenType.LOGICAL_OR,
+                        TokenType.LOGICAL_NOT, TokenType.EQUALS, TokenType.GREATER_THAN, TokenType.LESS_THAN,
+                        TokenType.GREATER_THAN_OR_EQUALS, TokenType.LESS_THAN_OR_EQUALS, TokenType.RETURN,
+                        TokenType.CONTINUE, TokenType.BREAK)
+                .stream()
+                .map(TokenType::getIdentifier)
+                .map(Pattern::quote)
+                .collect(Collectors.joining("|","(?:", ")"));
+
+        highlightingRules.add(new HighlightingRule("Binary Operators", Pattern.compile(binaryOperatorsRegex), Colors.RED));
+        highlightingRules.add(new HighlightingRule("Constructors", Pattern.compile("(?:\\*(?=.*\\s*<<\\s*\\(.*\\)\\s*::)|(?<=<<)\\s*\\*)"), Color.BLACK));
+        highlightingRules.add(new HighlightingRule("Keywords", Pattern.compile("(?:\\?\\?|--|\\+\\+|<>)"), Colors.ORANGE));
+        highlightingRules.add(new HighlightingRule("Numbers", Pattern.compile("[0-9]+\\.?[0-9]*"), Colors.PURPLE));
+        highlightingRules.add(new HighlightingRule("Booleans", Pattern.compile("($:true|false)"), Colors.PURPLE));
+        highlightingRules.add(new HighlightingRule("Identifiers", Pattern.compile("[A-Za-z]\\w+"), Color.BLACK));
+        highlightingRules.add(new HighlightingRule("Index Operators", Pattern.compile("\\$\\w+"), Colors.GREEN));
+        highlightingRules.add(new HighlightingRule("Access Operators", Pattern.compile("(?:@\\w*|#\\w*)"), Colors.BLUE));
+        highlightingRules.add(new HighlightingRule("Delete Operators", Pattern.compile("~\\w*"), Colors.ORANGE));
+        highlightingRules.add(new HighlightingRule("Types", Pattern.compile("(?<=:)[A-Z]\\w+"), Colors.GREEN));
+        highlightingRules.add(new HighlightingRule("Type Keyword", Pattern.compile("(?<=:)Type"), Colors.BLUE));
+        highlightingRules.add(new HighlightingRule("Parameterized Types", Pattern.compile("(?<=\\w)(?:\\[|:\\[).*\\]"), Colors.GREEN));
+        highlightingRules.add(new HighlightingRule("Separators", Pattern.compile("[(|)\\[\\]]"), Colors.BLUE));
+        highlightingRules.add(new HighlightingRule("Function Declarations", Pattern.compile("\\w+(?=.*\\s*<<\\s*\\(.*\\)\\s*::)"), Colors.GREEN));
+        highlightingRules.add(new HighlightingRule("Function Calls", Pattern.compile("\\w+(?=!)"), Colors.GREEN));
+        highlightingRules.add(new HighlightingRule("Punctuation", Pattern.compile("[.,:!&]"), Colors.ORANGE));
+        highlightingRules.add(new HighlightingRule("Characters", Pattern.compile("(?<!`)(?:`\\\\.`|`[^`\\\\]`)(?!`)"), Colors.PURPLE));
+        highlightingRules.add(new HighlightingRule("Quoted Identifiers", Pattern.compile("(?<!`.)`[^`][^`\n]+`"), Colors.BLUE));
+        highlightingRules.add(new HighlightingRule("Strings", Pattern.compile("``(?:\\\\.|[^`\\\\]|`(?!`))*``"), Colors.PURPLE));
+        highlightingRules.add(new HighlightingRule("Comments", Pattern.compile("[~][:].*[:][~]"), Colors.BLUE));
+
+        return highlightingRules;
+    }
+
+    public void highlight(int startRegion, int endRegion) {
+        String text;
+        try {
+            text = textDocument.getText(0, textDocument.getLength());
+        } catch (BadLocationException e) {
+            throw new RuntimeException(e);
+        }
+
+        for (HighlightingRule rule : highlightingRules) {
+            Pattern pattern = rule.getRegexPattern();
+            Matcher matcher = pattern.matcher(text);
+            matcher = matcher.region(startRegion, endRegion);
+            AttributeSet attributeSet = rule.getAttributeSet();
+            while (matcher.find()) {
+                int start = matcher.start();
+                int end = matcher.end();
+                int length = end - start;
+                textDocument.setCharacterAttributes(start, length, attributeSet, false);
+            }
+        }
+
+//        Color blue = new Color(0, 118, 186);
+//        Color orange = new Color(242, 114, 0);
+//
+//        StyleContext styleContext = StyleContext.getDefaultStyleContext();
+//        AttributeSet separators = styleContext.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, blue);
+//
+//        Pattern separatorRegexPattern = Pattern.compile("[(|)\\[\\]]");
+//        Matcher matcher = separatorRegexPattern.matcher(text);
+//        matcher = matcher.region(0, text.length());
+//        while (matcher.find()) {
+//            int start = matcher.start();
+//            int end = matcher.end();
+//            int length = end - start;
+//            textDocument.setCharacterAttributes(start, length, separators, false);
+//        }
+//
+//        AttributeSet punctuation = styleContext.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, orange);
+//
+//        Pattern punctuationRegexPattern = Pattern.compile("[.,:!]");
+//        matcher = punctuationRegexPattern.matcher(text);
+//        matcher = matcher.region(0, text.length());
+//        while (matcher.find()) {
+//            int start = matcher.start();
+//            int end = matcher.end();
+//            int length = end - start;
+//            textDocument.setCharacterAttributes(start, length, punctuation, false);
+//        }
+    }
+}
