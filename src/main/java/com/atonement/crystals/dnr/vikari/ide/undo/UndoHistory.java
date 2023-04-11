@@ -90,6 +90,15 @@ public class UndoHistory {
     }
 
     public void addHistoryItem(UndoHistoryItem item) {
+        addHistoryItem_SingleCharacterEdits(item);
+//        addHistoryItem_MergeRelatedEdits(item);
+    }
+
+    /**
+     * The original version of the add algorithm.
+     * @param item The UndoHistoryItem to add.
+     */
+    public void addHistoryItem_SingleCharacterEdits(UndoHistoryItem item) {
         if (!enabled) {
             return;
         }
@@ -97,12 +106,34 @@ public class UndoHistory {
             historyItems.add(++position, item);
             System.out.println("Added: " + item);
         } else {
+            historyItems.add(++position, item);
+            System.out.println("Added: " + item);
+            // remove dead entries
+            for (int i = position + 1; i < historyItems.size(); i++) {
+                historyItems.remove(i);
+            }
+        }
+    }
+
+    /**
+     * The new version of the add algorithm. Merges related edits together.
+     * @param item The UndoHistoryItem to add.
+     */
+    public void addHistoryItem_MergeRelatedEdits(UndoHistoryItem item) {
+        if (!enabled) {
+            return;
+        }
+        if (position == -1) {
+            historyItems.add(++position, item);
+            System.out.println("Added: " + item);
+        } else {
+            // TODO: Implement changes.
 //            UndoHistoryItem last = historyItems.get(position);
 //            if (!last.isFinished() && mergable(last, item)) {
 //                merge(last, item);
 //            } else {
-                historyItems.add(++position, item);
-                System.out.println("Added: " + item);
+            historyItems.add(++position, item);
+            System.out.println("Added: " + item);
 //            }
 
             // remove dead entries

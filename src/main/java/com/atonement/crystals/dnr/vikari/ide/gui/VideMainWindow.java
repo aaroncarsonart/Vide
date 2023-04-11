@@ -4,10 +4,9 @@ import com.atonement.crystals.dnr.vikari.ide.parsing.SyntaxHighlighter;
 import com.atonement.crystals.dnr.vikari.ide.undo.UndoHistory;
 import com.atonement.crystals.dnr.vikari.ide.undo.UndoHistoryItem;
 import com.atonement.crystals.dnr.vikari.ide.undo.UndoHistoryItemType;
+import com.atonement.crystals.dnr.vikari.ide.util.CustomHTMLWriter;
+import com.atonement.crystals.dnr.vikari.ide.util.HTMLTransferable;
 
-import javax.swing.AbstractAction;
-import javax.swing.Action;
-import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -27,7 +26,6 @@ import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.DocumentFilter;
 import javax.swing.text.Element;
 import javax.swing.text.StyledDocument;
-import javax.swing.undo.UndoManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
@@ -36,14 +34,17 @@ import java.awt.Event;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
+import java.awt.datatransfer.Clipboard;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -191,6 +192,8 @@ public class VideMainWindow {
                     throw new RuntimeException(e);
                 }
 
+                // TODO: Add CaretListener to finalize edits when no text is added or removed.
+                // TODO: Detect edits greater than length 1 and finalize previous edit before adding them.
                 addInsertTextUndoHistoryItem(offset, length, addedText);
 
                 // syntax color highlighting
@@ -213,6 +216,8 @@ public class VideMainWindow {
                         throw new RuntimeException(e);
                     }
 
+                    // TODO: Add CaretListener to finalize edits when no text is added or removed.
+                    // TODO: Detect edits greater than length 1 and finalize previous edit before adding them.
                     addRemoveTextUndoHistoryItem(startIndex, length, removedText);
                 }
                 // syntax color highlighting
@@ -224,6 +229,7 @@ public class VideMainWindow {
         editorScrollPane = new JScrollPane();
         editorScrollPane.getViewport().add(editorTextPane);
         editorScrollPane.setRowHeaderView(lineNumbers);
+        //TODO: Make touch scroll events happen one line at a time.
 
         Container contentPane = videWindow.getContentPane();
         contentPane.add(editorScrollPane, BorderLayout.CENTER);
@@ -298,9 +304,14 @@ public class VideMainWindow {
             }
         });
 
+        JMenuItem copyFormattedTextItem = new JMenuItem("Copy Formatted Text");
+        copyFormattedTextItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | Event.SHIFT_MASK));
+        copyFormattedTextItem.addActionListener(event -> copyHtmlFormattedTextSelectionToClipboard());
+
         editMenu = new JMenu("Edit");
         editMenu.add(undoItem);
         editMenu.add(redoItem);
+        editMenu.add(copyFormattedTextItem);
 
         menuBar = new JMenuBar();
         menuBar.add(fileMenu);
@@ -431,5 +442,35 @@ public class VideMainWindow {
         UndoHistoryItem newInsertItem = new UndoHistoryItem(UndoHistoryItemType.REMOVE_TEXT,
                 startCursor, endCursor, removedText);
         undoHistory.addHistoryItem(newInsertItem);
+    }
+
+    public void copyHtmlFormattedTextSelectionToClipboard() {
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+
+        int startIndex = editorTextPane.getSelectionStart();
+        int endIndex = editorTextPane.getSelectionEnd();
+        int length = endIndex - startIndex;
+        StyledDocument styledDocument = editorTextPane.getStyledDocument();
+
+        try (OutputStream os = new ByteArrayOutputStream();
+             OutputStreamWriter osw = new OutputStreamWriter(os)) {
+            CustomHTMLWriter htmlWriter = new CustomHTMLWriter(osw, styledDocument, startIndex, length);
+            htmlWriter.write();
+            osw.flush();
+            String contents = os.toString();
+
+            // fix preservation of indentation
+            contents = contents.replaceAll(Pattern.quote("<body>"), "<body><pre>");
+            contents = contents.replaceAll(Pattern.quote("</body>"), "</pre></body>");
+
+            // fix line spacing
+            contents = contents.replaceAll(Pattern.quote("<p class=default>"), "");
+            contents = contents.replaceAll(Pattern.quote("</p>"), "<br/>");
+
+            HTMLTransferable htmlTransferable = new HTMLTransferable(contents);
+            clipboard.setContents(htmlTransferable, null);
+        } catch (IOException | BadLocationException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
