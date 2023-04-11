@@ -222,7 +222,7 @@ public class VideMainWindow {
                 }
                 // syntax color highlighting
                 fileContents = editorTextPane.getText();
-                syntaxHighlightCurrentLine(documentEvent.getOffset() - documentEvent.getLength());
+                syntaxHighlightCurrentLine(documentEvent.getOffset());
             }
         });
 
