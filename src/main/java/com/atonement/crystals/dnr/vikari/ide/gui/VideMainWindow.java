@@ -13,10 +13,11 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -53,12 +54,15 @@ public class VideMainWindow {
 
     private JFrame videWindow;
     private JScrollPane editorScrollPane;
-    private JTextPane editorTextPane;
+    private VideTextPane editorTextPane;
     private JTextArea lineNumbers;
     private JMenuBar menuBar;
     private JMenu fileMenu;
     private JMenu editMenu;
+    private JMenu viewMenu;
     private Font font;
+    int fontWidth;
+    int fontHeight;
 
     private File currentFile;
     private String fileContents;
@@ -75,7 +79,7 @@ public class VideMainWindow {
 
         font = new Font("Andale Mono", Font.PLAIN, 18);
 
-        editorTextPane = new JTextPane();
+        editorTextPane = new VideTextPane();
         editorTextPane.setEditable(true);
         editorTextPane.setFont(font);
 
@@ -83,8 +87,9 @@ public class VideMainWindow {
         syntaxHighlighter = new SyntaxHighlighter(editorTextPane.getStyledDocument());
 
         FontMetrics fontMetrics = editorTextPane.getFontMetrics(font);
-        int singleCharWidth = fontMetrics.charWidth(' ');
-        editorTextPane.setBorder(BorderFactory.createEmptyBorder(0, singleCharWidth, 0, 0));
+        fontWidth = fontMetrics.charWidth(' ');
+        fontHeight = fontMetrics.getHeight();
+        editorTextPane.setBorder(BorderFactory.createEmptyBorder(0, fontWidth, 0, 0));
 
         // replace tabs with spaces
         ((DefaultStyledDocument) editorTextPane.getDocument()).setDocumentFilter(new DocumentFilter() {
@@ -118,7 +123,7 @@ public class VideMainWindow {
         lineNumbers.setEditable(false);
         lineNumbers.setEnabled(false);
         lineNumbers.setFont(font);
-        lineNumbers.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, singleCharWidth));
+        lineNumbers.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, fontWidth));
 
         // manage updating of line numbers
         editorTextPane.getDocument().addDocumentListener(new DocumentListener() {
@@ -229,7 +234,13 @@ public class VideMainWindow {
         editorScrollPane = new JScrollPane();
         editorScrollPane.getViewport().add(editorTextPane);
         editorScrollPane.setRowHeaderView(lineNumbers);
-        //TODO: Make touch scroll events happen one line at a time.
+        editorScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        editorScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+
+        JScrollBar verticalScrollBar = editorScrollPane.getVerticalScrollBar();
+        verticalScrollBar.setUnitIncrement(fontHeight);
+        JScrollBar horizontalScrollBar = editorScrollPane.getHorizontalScrollBar();
+        horizontalScrollBar.setUnitIncrement(fontWidth);
 
         Container contentPane = videWindow.getContentPane();
         contentPane.add(editorScrollPane, BorderLayout.CENTER);
@@ -313,9 +324,20 @@ public class VideMainWindow {
         editMenu.add(redoItem);
         editMenu.add(copyFormattedTextItem);
 
+        JMenuItem toggleWordWrapMenuItem = new JMenuItem("Toggle Word Wrap");
+        toggleWordWrapMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SLASH, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | Event.ALT_MASK));
+        toggleWordWrapMenuItem.addActionListener(event -> {
+            editorTextPane.toggleWordWrap();
+            editorScrollPane.setViewportView(editorTextPane);
+        });
+
+        viewMenu = new JMenu("View");
+        viewMenu.add(toggleWordWrapMenuItem);
+
         menuBar = new JMenuBar();
         menuBar.add(fileMenu);
         menuBar.add(editMenu);
+        menuBar.add(viewMenu);
 
         videWindow.setJMenuBar(menuBar);
 
