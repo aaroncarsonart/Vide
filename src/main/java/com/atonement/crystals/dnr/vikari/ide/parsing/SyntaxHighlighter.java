@@ -58,9 +58,9 @@ public class SyntaxHighlighter {
         highlightingRules.add(new HighlightingRule("Separators", Pattern.compile("[(|)\\[\\]]"), Colors.BLUE));
         highlightingRules.add(new HighlightingRule("Function Declarations", Pattern.compile("\\w+(?=.*\\s*<<\\s*\\(.*\\)\\s*::)"), Colors.GREEN));
         highlightingRules.add(new HighlightingRule("Function Calls", Pattern.compile("\\w+(?=!)"), Colors.GREEN));
-        highlightingRules.add(new HighlightingRule("Punctuation", Pattern.compile("[.,:!&]"), Colors.ORANGE));
+        highlightingRules.add(new HighlightingRule("Punctuation", Pattern.compile("[.,:;!&]"), Colors.ORANGE));
         highlightingRules.add(new HighlightingRule("Characters", Pattern.compile("(?<!`)(?:`\\\\.`|`[^`\\\\]`)(?!`)"), Colors.PURPLE));
-        highlightingRules.add(new HighlightingRule("Quoted Identifiers", Pattern.compile("(?<!`.)`[^`][^`\n]+`"), Colors.BLUE));
+        highlightingRules.add(new HighlightingRule("Quoted Identifiers", Pattern.compile("(?<!(`|`.))`[^`][^`]+`"), Colors.BLUE));
         highlightingRules.add(new HighlightingRule("Strings", Pattern.compile("``(?:\\\\.|[^`\\\\]|`(?!`))*``"), Colors.PURPLE));
         highlightingRules.add(new HighlightingRule("Comments", Pattern.compile("[~][:].*[:][~]"), Colors.BLUE));
 

@@ -10,6 +10,7 @@ import com.atonement.crystals.dnr.vikari.ide.util.HTMLTransferable;
 import javax.swing.BorderFactory;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -19,6 +20,7 @@ import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.AttributeSet;
@@ -36,6 +38,8 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -60,9 +64,13 @@ public class VideMainWindow {
     private JMenu fileMenu;
     private JMenu editMenu;
     private JMenu viewMenu;
+    private JLabel statusLabel;
+
     private Font font;
-    int fontWidth;
-    int fontHeight;
+    private int fontWidth;
+    private int fontHeight;
+
+    private Color lightGrey;
 
     private File currentFile;
     private String fileContents;
@@ -70,12 +78,11 @@ public class VideMainWindow {
     private SyntaxHighlighter syntaxHighlighter;
     private UndoHistory undoHistory;
 
+    private int linePosition;
+    private int columnPosition;
+
     public VideMainWindow() {
         videWindow = new JFrame("VIDE");
-//        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-//        videWindow.setSize(screenSize.width, screenSize.height);
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        videWindow.setSize(screenSize.width / 3 * 2, screenSize.height / 3 * 2);
 
         font = new Font("Andale Mono", Font.PLAIN, 18);
 
@@ -117,8 +124,10 @@ public class VideMainWindow {
             }
         });
 
+        lightGrey = new Color(245, 245, 245);
+
         lineNumbers = new JTextArea("1");
-        lineNumbers.setBackground(new Color(245, 245, 245));
+        lineNumbers.setBackground(lightGrey);
         lineNumbers.setForeground(Color.GRAY);
         lineNumbers.setEditable(false);
         lineNumbers.setEnabled(false);
@@ -231,6 +240,11 @@ public class VideMainWindow {
             }
         });
 
+        editorTextPane.addCaretListener(event -> {
+            updateLineColumnPosition(event.getDot());
+            updateStatusLabel();
+        });
+
         editorScrollPane = new JScrollPane();
         editorScrollPane.getViewport().add(editorTextPane);
         editorScrollPane.setRowHeaderView(lineNumbers);
@@ -248,6 +262,7 @@ public class VideMainWindow {
         JMenuItem openItem = new JMenuItem("Open");
         openItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         openItem.addActionListener(event -> {
+            // TODO: Try using FileDialog instead of JFileChooser to force a native window look.
             JFileChooser fileChooser = new JFileChooser("/Users/aaron/DNR/test");
             int result = fileChooser.showOpenDialog(videWindow);
             if (result == JFileChooser.APPROVE_OPTION) {
@@ -341,6 +356,28 @@ public class VideMainWindow {
 
         videWindow.setJMenuBar(menuBar);
 
+        // Make window resize events snap to increments of font width and height.
+        videWindow.addComponentListener(new ComponentAdapter() {
+            public void componentResized(ComponentEvent evt) {
+                int windowHeight = videWindow.getHeight();
+                int textpaneHeight = editorScrollPane.getHeight();
+                int yOffset = windowHeight - textpaneHeight;
+                // TODO: Complete implementation.
+            }
+        });
+
+//        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+//        videWindow.setSize(screenSize.width, screenSize.height);
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        videWindow.setSize(screenSize.width / 3 * 2, screenSize.height / 3 * 2);
+
+        statusLabel = new JLabel();
+        statusLabel.setBorder(new EmptyBorder(2, 2, 2, 2));
+        statusLabel.setBackground(lightGrey);
+        statusLabel.setForeground(Color.DARK_GRAY);
+        statusLabel.setFont(font.deriveFont(14.0f));
+        contentPane.add(statusLabel, BorderLayout.SOUTH);
+
         currentFile = new File("/Users/aaron/DNR/Test/ExampleCrystal.DNR");
         loadFile(currentFile);
     }
@@ -395,7 +432,7 @@ public class VideMainWindow {
 
     private int getIndexOfNewlineBefore(int position) {
         if (!fileContents.isEmpty()) {
-            for (int i = position; i >= 0; i--) {
+            for (int i = position - 1; i >= 0; i--) {
                 char c = fileContents.charAt(i);
                 if (c == '\n') {
                     return i + 1;
@@ -494,5 +531,31 @@ public class VideMainWindow {
         } catch (IOException | BadLocationException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void updateLineColumnPosition(int caret) {
+        linePosition = 1;
+        int lastLine = 0;
+        for (int i = 0; i < caret; i++) {
+            char c = fileContents.charAt(i);
+            if (c == '\n') {
+                linePosition++;
+                lastLine = i;
+            }
+        }
+        int offset = linePosition == 1 ? 1 : 0;
+        columnPosition = caret - lastLine + offset;
+    }
+
+    public void updateStatusLabel() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(" Line: ");
+        sb.append(linePosition);
+        sb.append("  Col: ");
+        sb.append(columnPosition);
+
+        String result = sb.toString();
+        statusLabel.setText(result);
     }
 }
