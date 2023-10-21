@@ -1,4 +1,4 @@
-package com.atonement.crystals.dnr.vikari.ide.parsing;
+package com.atonementcrystals.dnr.vikari.ide.parsing;
 
 import javax.swing.text.AttributeSet;
 import javax.swing.text.SimpleAttributeSet;

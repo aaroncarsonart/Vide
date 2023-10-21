@@ -1,6 +1,6 @@
-package com.atonement.crystals.dnr.vikari.ide.parsing;
+package com.atonementcrystals.dnr.vikari.ide.parsing;
 
-import com.atonement.crystals.dnr.vikari.core.identifier.TokenType;
+import com.atonementcrystals.dnr.vikari.core.identifier.TokenType;
 
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
@@ -32,7 +32,7 @@ public class SyntaxHighlighter {
 
         String binaryOperatorsRegex = Arrays.asList(TokenType.MODULUS, TokenType.MULTIPLY, TokenType.LEFT_DIVIDE,
                         TokenType.ADD, TokenType.SUBTRACT, TokenType.LEFT_ASSIGNMENT, TokenType.LEFT_ADD_ASSIGNMENT,
-                        TokenType.LEFT_SUBTRACT_ASSIGNMENT, TokenType.LEFT_DIVIDE_ASSIGNMENT,
+                        TokenType.LEFT_SUBTRACT_ASSIGNMENT, TokenType.LEFT_DIVIDE_ASSIGNMENT, TokenType.RIGHT_DIVIDE,
                         TokenType.LEFT_MULTIPLY_ASSIGNMENT, TokenType.LEFT_LOGICAL_OR_ASSIGNMENT,
                         TokenType.LEFT_LOGICAL_AND_ASSIGNMENT, TokenType.LOGICAL_AND, TokenType.LOGICAL_OR,
                         TokenType.LOGICAL_NOT, TokenType.EQUALS, TokenType.GREATER_THAN, TokenType.LESS_THAN,
@@ -45,27 +45,34 @@ public class SyntaxHighlighter {
 
         highlightingRules.add(new HighlightingRule("Binary Operators", Pattern.compile(binaryOperatorsRegex), Colors.RED));
         highlightingRules.add(new HighlightingRule("Constructors", Pattern.compile("(?:\\*(?=.*\\s*<<\\s*\\(.*\\)\\s*::)|(?<=<<)\\s*\\*)"), Color.BLACK));
-        highlightingRules.add(new HighlightingRule("Keywords", Pattern.compile("(?:\\?\\?|--|\\+\\+|<>)"), Colors.ORANGE));
-        highlightingRules.add(new HighlightingRule("Numbers", Pattern.compile("[0-9]+\\.?[0-9]*"), Colors.PURPLE));
-        highlightingRules.add(new HighlightingRule("Booleans", Pattern.compile("($:true|false)"), Colors.PURPLE));
-        highlightingRules.add(new HighlightingRule("Identifiers", Pattern.compile("[A-Za-z]\\w+"), Color.BLACK));
+        highlightingRules.add(new HighlightingRule("Keywords", Pattern.compile("(?:\\?|--|\\+\\+|<>)"), Colors.ORANGE));
+        highlightingRules.add(new HighlightingRule("Numbers", Pattern.compile("\\d+(?:\\.\\d+)?(?i)[LFDB]?"), Colors.PURPLE));
+        highlightingRules.add(new HighlightingRule("Identifiers", Pattern.compile("[a-z]\\w+"), Color.BLACK));
+        highlightingRules.add(new HighlightingRule("Booleans", Pattern.compile("(?:true|false)"), Colors.PURPLE));
         highlightingRules.add(new HighlightingRule("Index Operators", Pattern.compile("\\$\\w+"), Colors.GREEN));
         highlightingRules.add(new HighlightingRule("Access Operators", Pattern.compile("(?:@\\w*|#\\w*)"), Colors.BLUE));
         highlightingRules.add(new HighlightingRule("Delete Operators", Pattern.compile("~\\w*"), Colors.ORANGE));
-        highlightingRules.add(new HighlightingRule("Types", Pattern.compile("(?<=:)[A-Z]\\w+"), Colors.GREEN));
-        highlightingRules.add(new HighlightingRule("Type Keyword", Pattern.compile("(?<=:)Type"), Colors.BLUE));
+        highlightingRules.add(new HighlightingRule("Types", Pattern.compile("(?<!\\w)[A-Z]\\w+"), Colors.GREEN));
+        highlightingRules.add(new HighlightingRule("Type Keyword", Pattern.compile("(?<!\\w)(Type|AbstractType" +
+                "|Interface|Enum|Record|Library|TestSuite)(?!\\w)"), Colors.BLUE));
         highlightingRules.add(new HighlightingRule("Parameterized Types", Pattern.compile("(?<=\\w)(?:\\[|:\\[).*\\]"), Colors.GREEN));
         highlightingRules.add(new HighlightingRule("Separators", Pattern.compile("[(|)\\[\\]]"), Colors.BLUE));
         highlightingRules.add(new HighlightingRule("Function Declarations", Pattern.compile("\\w+(?=.*\\s*<<\\s*\\(.*\\)\\s*::)"), Colors.GREEN));
         highlightingRules.add(new HighlightingRule("Function Calls", Pattern.compile("\\w+(?=!)"), Colors.GREEN));
         highlightingRules.add(new HighlightingRule("Punctuation", Pattern.compile("[.,:;!&]"), Colors.ORANGE));
+        highlightingRules.add(new HighlightingRule("Curly Braces", Pattern.compile("[{}]"), Colors.MAROON));
+        highlightingRules.add(new HighlightingRule("Constants", Pattern.compile("(?<=[{])[^{}]+(?=[}])"), Colors.PINK));
+        highlightingRules.add(new HighlightingRule("Annotations", Pattern.compile("\\$\\{[A-Z]\\w*[^\\}]*\\}"), Colors.MAROON));
         highlightingRules.add(new HighlightingRule("Characters", Pattern.compile("(?<!`)(?:`\\\\.`|`[^`\\\\]`)(?!`)"), Colors.PURPLE));
         highlightingRules.add(new HighlightingRule("Quoted Identifiers", Pattern.compile("(?<!(`|`.))`[^`][^`]+`"), Colors.BLUE));
         highlightingRules.add(new HighlightingRule("Strings", Pattern.compile("``(?:\\\\.|[^`\\\\]|`(?!`))*``"), Colors.PURPLE));
-        highlightingRules.add(new HighlightingRule("Comments", Pattern.compile("[~][:].*[:][~]"), Colors.BLUE));
+        highlightingRules.add(new HighlightingRule("Comments", Pattern.compile("~:(?::(?!~)|[^:])*(?::~|$)"), Colors.BLUE));
+        highlightingRules.add(new HighlightingRule("Break Operator", Pattern.compile("\\bvv\\b"), Colors.RED));
 
         return highlightingRules;
     }
+
+    // TODO: Add multi-line pattern detection.
 
     public void highlight(int startRegion, int endRegion) {
         String text;

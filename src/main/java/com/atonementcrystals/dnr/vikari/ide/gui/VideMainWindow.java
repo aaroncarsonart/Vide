@@ -1,11 +1,12 @@
-package com.atonement.crystals.dnr.vikari.ide.gui;
+package com.atonementcrystals.dnr.vikari.ide.gui;
 
-import com.atonement.crystals.dnr.vikari.ide.parsing.SyntaxHighlighter;
-import com.atonement.crystals.dnr.vikari.ide.undo.UndoHistory;
-import com.atonement.crystals.dnr.vikari.ide.undo.UndoHistoryItem;
-import com.atonement.crystals.dnr.vikari.ide.undo.UndoHistoryItemType;
-import com.atonement.crystals.dnr.vikari.ide.util.CustomHTMLWriter;
-import com.atonement.crystals.dnr.vikari.ide.util.HTMLTransferable;
+import com.atonementcrystals.dnr.vikari.ide.parsing.SyntaxHighlighter;
+import com.atonementcrystals.dnr.vikari.ide.undo.UndoHistory;
+import com.atonementcrystals.dnr.vikari.ide.undo.UndoHistoryItem;
+import com.atonementcrystals.dnr.vikari.ide.undo.UndoHistoryItemType;
+import com.atonementcrystals.dnr.vikari.ide.util.CustomHTMLWriter;
+import com.atonementcrystals.dnr.vikari.ide.util.GlobalUserSettings;
+import com.atonementcrystals.dnr.vikari.ide.util.HTMLTransferable;
 
 import javax.swing.BorderFactory;
 import javax.swing.JFileChooser;
@@ -41,18 +42,16 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.KeyEvent;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.file.Files;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class VideMainWindow {
 
@@ -66,6 +65,7 @@ public class VideMainWindow {
     private JMenu viewMenu;
     private JLabel statusLabel;
 
+    private int fontSize;
     private Font font;
     private int fontWidth;
     private int fontHeight;
@@ -81,10 +81,11 @@ public class VideMainWindow {
     private int linePosition;
     private int columnPosition;
 
-    public VideMainWindow() {
+    public VideMainWindow(String filename) {
         videWindow = new JFrame("VIDE");
 
-        font = new Font("Andale Mono", Font.PLAIN, 18);
+        fontSize = 14;
+        font = new Font("Andale Mono", Font.PLAIN, fontSize);
 
         editorTextPane = new VideTextPane();
         editorTextPane.setEditable(true);
@@ -127,7 +128,7 @@ public class VideMainWindow {
         lightGrey = new Color(245, 245, 245);
 
         lineNumbers = new JTextArea("1");
-        lineNumbers.setBackground(lightGrey);
+        lineNumbers.setForeground(lightGrey);
         lineNumbers.setForeground(Color.GRAY);
         lineNumbers.setEditable(false);
         lineNumbers.setEnabled(false);
@@ -259,14 +260,25 @@ public class VideMainWindow {
         Container contentPane = videWindow.getContentPane();
         contentPane.add(editorScrollPane, BorderLayout.CENTER);
 
+//        JMenuItem newItem = new JMenuItem("New");
+//        newItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+//        newItem.addActionListener(event -> {
+//            javax.swing.SwingUtilities.invokeLater(() -> {
+//                VideMainWindow videMainWindow = new VideMainWindow();
+//                videMainWindow.start();
+//            });
+//        });
+
         JMenuItem openItem = new JMenuItem("Open");
         openItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         openItem.addActionListener(event -> {
             // TODO: Try using FileDialog instead of JFileChooser to force a native window look.
-            JFileChooser fileChooser = new JFileChooser("/Users/aaron/DNR/test");
+            String lastViewedDirectory = GlobalUserSettings.getLastViewedDirectory();
+            JFileChooser fileChooser = new JFileChooser(lastViewedDirectory);
             int result = fileChooser.showOpenDialog(videWindow);
             if (result == JFileChooser.APPROVE_OPTION) {
                 currentFile = fileChooser.getSelectedFile();
+                GlobalUserSettings.setLastViewedDirectory(currentFile.getParent());
                 loadFile(currentFile);
             }
         });
@@ -275,10 +287,12 @@ public class VideMainWindow {
         saveItem.addActionListener(event -> {
             System.out.println("Save");
             if (currentFile == null) {
-                JFileChooser fileChooser = new JFileChooser("/Users/aaron/DNR");
+                String lastViewedDirectory = GlobalUserSettings.getLastViewedDirectory();
+                JFileChooser fileChooser = new JFileChooser(lastViewedDirectory);
                 int result = fileChooser.showSaveDialog(videWindow);
                 if (result == JFileChooser.APPROVE_OPTION) {
                     currentFile = fileChooser.getSelectedFile();
+                    GlobalUserSettings.setLastViewedDirectory(currentFile.getParent());
                     saveFile(currentFile);
                 }
             } else {
@@ -288,10 +302,12 @@ public class VideMainWindow {
         JMenuItem saveAsItem = new JMenuItem("Save as");
         saveAsItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | Event.SHIFT_MASK));
         saveAsItem.addActionListener(event -> {
-            JFileChooser fileChooser = new JFileChooser("/Users/aaron/DNR");
+            String lastViewedDirectory = GlobalUserSettings.getLastViewedDirectory();
+            JFileChooser fileChooser = new JFileChooser(lastViewedDirectory);
             int result = fileChooser.showSaveDialog(videWindow);
             if (result == JFileChooser.APPROVE_OPTION) {
                 currentFile = fileChooser.getSelectedFile();
+                GlobalUserSettings.setLastViewedDirectory(currentFile.getParent());
                 saveFile(currentFile);
             }
         });
@@ -308,7 +324,17 @@ public class VideMainWindow {
             updateWindowNameWithFilename("<New File>");
         });
 
+//        JMenuItem closeItem = new JMenuItem("Close");
+//        closeItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+//        closeItem.addActionListener(event -> {
+//            SwingUtilities.invokeLater(() -> {
+//                videWindow.setVisible(false); //you can't see me!
+//                videWindow.dispose();
+//            });
+//        });
+
         fileMenu = new JMenu("File");
+//        fileMenu.add(newItem);
         fileMenu.add(openItem);
         fileMenu.add(saveItem);
         fileMenu.add(saveAsItem);
@@ -373,14 +399,57 @@ public class VideMainWindow {
 
         statusLabel = new JLabel();
         statusLabel.setBorder(new EmptyBorder(2, 2, 2, 2));
-        statusLabel.setBackground(lightGrey);
+        statusLabel.setForeground(lightGrey);
         statusLabel.setForeground(Color.DARK_GRAY);
         statusLabel.setFont(font.deriveFont(14.0f));
         contentPane.add(statusLabel, BorderLayout.SOUTH);
 
-        currentFile = new File("/Users/aaron/DNR/Test/ExampleCrystal.DNR");
-        loadFile(currentFile);
+//        loadPropertiesFile();
+        if (filename != null) {
+            currentFile = new File(filename);
+            try {
+                // Ensure the directory exists.
+                File directory = currentFile.getParentFile();
+                if (directory != null && !directory.exists()) {
+                    Files.createDirectories(directory.toPath());
+                }
+                // Ensure the file exists.
+                if (!currentFile.exists()) {
+                    boolean newFileWasCreated = currentFile.createNewFile();
+                    if (!newFileWasCreated) {
+                        System.err.println("Unable to create new file: " + filename);
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            loadFile(currentFile);
+        }
     }
+
+//    private File propertiesFile = null;
+//    private Properties properties = null;
+
+//    private String lastViewedDirectory = null;
+//
+//    private void loadPropertiesFile() {
+//        String homeDirPath = System.getProperty("user.home");
+//        String programIdFilePath = homeDirPath + "/.vide/vide.properties";
+//        try {
+//            propertiesFile = new File(programIdFilePath);
+//            properties = new Properties();
+//            if (!propertiesFile.exists()) {
+//                propertiesFile.createNewFile();
+//                properties.put(LAST_VIEWED_DIRECTORY_KEY, homeDirPath);
+//                lastViewedDirectory = homeDirPath;
+//            } else {
+//                properties.load(new FileInputStream(propertiesFile));
+//                lastViewedDirectory = properties.getProperty(LAST_VIEWED_DIRECTORY_KEY);
+//            }
+//        } catch (IOException e) {
+//            System.err.println("Unable to load file ``vide.properties``.");
+//        }
+//    }
 
     public void start() {
         videWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -393,8 +462,8 @@ public class VideMainWindow {
     }
 
     private void loadFile(File file) {
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            fileContents = reader.lines().collect(Collectors.joining("\n"));
+        try {
+            fileContents = Files.readString(file.toPath());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

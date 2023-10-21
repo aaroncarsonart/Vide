@@ -1,4 +1,4 @@
-package com.atonement.crystals.dnr.vikari.ide.util;
+package com.atonementcrystals.dnr.vikari.ide.util;
 
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;

@@ -1,4 +1,4 @@
-package com.atonement.crystals.dnr.vikari.core.identifier;
+package com.atonementcrystals.dnr.vikari.core.identifier;
 
 public enum TokenType {
 

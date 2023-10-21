@@ -1,4 +1,4 @@
-package com.atonement.crystals.dnr.vikari.ide.undo;
+package com.atonementcrystals.dnr.vikari.ide.undo;
 
 import javax.swing.text.BadLocationException;
 import javax.swing.text.StyledDocument;

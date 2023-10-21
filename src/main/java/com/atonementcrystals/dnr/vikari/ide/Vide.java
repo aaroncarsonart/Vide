@@ -1,17 +1,28 @@
-package com.atonement.crystals.dnr.vikari.ide;
+package com.atonementcrystals.dnr.vikari.ide;
 
-import com.atonement.crystals.dnr.vikari.ide.gui.VideMainWindow;
+import com.atonementcrystals.dnr.vikari.ide.gui.VideMainWindow;
 
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
-public class VIDE {
+public class Vide {
     public static void main(String[] args) {
         setAppleLookAndFeel();
-        javax.swing.SwingUtilities.invokeLater(() -> {
-                VideMainWindow videMainWindow = new VideMainWindow();
+
+        // TODO: Rewrite Vide such that multiple windows delegate functionality between them without
+        //        unnecessarily duplicating instances of menus and other program-wide settings.
+
+        if (args.length == 0) {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                VideMainWindow videMainWindow = new VideMainWindow(null);
                 videMainWindow.start();
             });
+        } else for (String filename : args) {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                VideMainWindow videMainWindow = new VideMainWindow(filename);
+                videMainWindow.start();
+            });
+        }
     }
 
     private static void setAppleLookAndFeel() {

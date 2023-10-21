@@ -1,4 +1,4 @@
-package com.atonement.crystals.dnr.vikari.ide.gui;
+package com.atonementcrystals.dnr.vikari.ide.gui;
 
 import javax.swing.JTextPane;
 import java.awt.Dimension;

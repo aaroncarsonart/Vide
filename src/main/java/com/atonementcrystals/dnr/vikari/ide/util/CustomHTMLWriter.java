@@ -1,4 +1,4 @@
-package com.atonement.crystals.dnr.vikari.ide.util;
+package com.atonementcrystals.dnr.vikari.ide.util;
 
 import javax.swing.text.StyledDocument;
 import javax.swing.text.html.MinimalHTMLWriter;
