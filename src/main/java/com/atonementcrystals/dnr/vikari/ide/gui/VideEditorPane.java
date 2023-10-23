@@ -3,7 +3,10 @@ package com.atonementcrystals.dnr.vikari.ide.gui;
 import javax.swing.JTextPane;
 import java.awt.Dimension;
 
-public class VideTextPane extends JTextPane {
+/**
+ * A custom JTextPane with modified behavior to enable and disable word wrap functionality.
+ */
+public class VideEditorPane extends JTextPane {
 
     private boolean wordWrap = false;
 
@@ -17,11 +20,7 @@ public class VideTextPane extends JTextPane {
         }
 
         // disable word wrap
-        if (getSize().width < getParent().getSize().width) {
-            return true;
-        } else {
-            return false;
-        }
+        return getSize().width < getParent().getSize().width;
     }
 
     public void setSize(Dimension dimension) {

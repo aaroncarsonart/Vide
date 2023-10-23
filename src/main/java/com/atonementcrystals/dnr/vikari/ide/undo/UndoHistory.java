@@ -5,10 +5,13 @@ import javax.swing.text.StyledDocument;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Manages the undo history for one VideEditorWindow instance.
+ */
 public class UndoHistory {
-    private List<UndoHistoryItem> historyItems;
+    private final List<UndoHistoryItem> historyItems;
     private int position = -1;
-    StyledDocument document;
+    private final StyledDocument document;
     private boolean enabled;
 
     public UndoHistory(StyledDocument document) {
@@ -68,7 +71,6 @@ public class UndoHistory {
             // insert inserted text.
             int startCursor = historyItem.getStartCursor();
             String removedText = historyItem.getMergedModifiedText();
-
             try {
                 document.insertString(startCursor, removedText, null);
             } catch (BadLocationException e) {
@@ -104,10 +106,8 @@ public class UndoHistory {
         }
         if (position == -1) {
             historyItems.add(++position, item);
-            System.out.println("Added: " + item);
         } else {
             historyItems.add(++position, item);
-            System.out.println("Added: " + item);
             // remove dead entries
             for (int i = position + 1; i < historyItems.size(); i++) {
                 historyItems.remove(i);
@@ -125,7 +125,6 @@ public class UndoHistory {
         }
         if (position == -1) {
             historyItems.add(++position, item);
-            System.out.println("Added: " + item);
         } else {
             // TODO: Implement changes.
 //            UndoHistoryItem last = historyItems.get(position);
@@ -133,7 +132,6 @@ public class UndoHistory {
 //                merge(last, item);
 //            } else {
             historyItems.add(++position, item);
-            System.out.println("Added: " + item);
 //            }
 
             // remove dead entries

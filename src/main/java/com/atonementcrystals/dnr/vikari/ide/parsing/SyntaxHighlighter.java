@@ -1,6 +1,6 @@
 package com.atonementcrystals.dnr.vikari.ide.parsing;
 
-import com.atonementcrystals.dnr.vikari.core.identifier.TokenType;
+import com.atonementcrystals.dnr.vikari.core.crystal.identifier.TokenType;
 
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
@@ -13,9 +13,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * For quickly determined syntax highlighting rules. To be applied before the Vikari interpreter
+ * pass can lex and parse the code to make the syntax highlighting exact.
+ */
 public class SyntaxHighlighter {
-    private StyledDocument textDocument;
-    private List<HighlightingRule> highlightingRules;
+    private final StyledDocument textDocument;
+    private final List<HighlightingRule> highlightingRules;
 
     public SyntaxHighlighter(StyledDocument textDocument) {
         this.textDocument = textDocument;
@@ -94,33 +98,5 @@ public class SyntaxHighlighter {
                 textDocument.setCharacterAttributes(start, length, attributeSet, false);
             }
         }
-
-//        Color blue = new Color(0, 118, 186);
-//        Color orange = new Color(242, 114, 0);
-//
-//        StyleContext styleContext = StyleContext.getDefaultStyleContext();
-//        AttributeSet separators = styleContext.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, blue);
-//
-//        Pattern separatorRegexPattern = Pattern.compile("[(|)\\[\\]]");
-//        Matcher matcher = separatorRegexPattern.matcher(text);
-//        matcher = matcher.region(0, text.length());
-//        while (matcher.find()) {
-//            int start = matcher.start();
-//            int end = matcher.end();
-//            int length = end - start;
-//            textDocument.setCharacterAttributes(start, length, separators, false);
-//        }
-//
-//        AttributeSet punctuation = styleContext.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, orange);
-//
-//        Pattern punctuationRegexPattern = Pattern.compile("[.,:!]");
-//        matcher = punctuationRegexPattern.matcher(text);
-//        matcher = matcher.region(0, text.length());
-//        while (matcher.find()) {
-//            int start = matcher.start();
-//            int end = matcher.end();
-//            int length = end - start;
-//            textDocument.setCharacterAttributes(start, length, punctuation, false);
-//        }
     }
 }

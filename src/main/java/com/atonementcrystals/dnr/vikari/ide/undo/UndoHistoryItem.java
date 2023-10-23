@@ -2,6 +2,9 @@ package com.atonementcrystals.dnr.vikari.ide.undo;
 
 import java.util.LinkedList;
 
+/**
+ * Models one entry for the UndoHistory.
+ */
 public class UndoHistoryItem {
     private UndoHistoryItemType type;
     private int startCursor;
