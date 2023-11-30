@@ -1,9 +1,12 @@
 package com.atonementcrystals.dnr.vikari.ide.gui;
 
-import com.atonementcrystals.dnr.vikari.ide.gui.document.LineNumbersDocumentListener;
-import com.atonementcrystals.dnr.vikari.ide.gui.document.SyntaxHighlightUndoHistoryDocumentListener;
+import com.atonementcrystals.dnr.vikari.ide.Vide;
+import com.atonementcrystals.dnr.vikari.ide.gui.document.SyntaxHighlightDocumentListener;
+import com.atonementcrystals.dnr.vikari.ide.gui.document.VideDocumentListener;
 import com.atonementcrystals.dnr.vikari.ide.gui.document.TabsToSpacesDocumentFilter;
-import com.atonementcrystals.dnr.vikari.ide.parsing.SyntaxHighlighter;
+import com.atonementcrystals.dnr.vikari.ide.parsing.VideColorTheme;
+import com.atonementcrystals.dnr.vikari.ide.parsing.VideEditorTheme;
+import com.atonementcrystals.dnr.vikari.ide.parsing.VikariSyntaxHighlighter;
 import com.atonementcrystals.dnr.vikari.ide.undo.UndoHistory;
 import com.atonementcrystals.dnr.vikari.ide.undo.UndoHistoryItem;
 import com.atonementcrystals.dnr.vikari.ide.undo.UndoHistoryItemType;
@@ -35,15 +38,17 @@ public class VideEditorWindow {
     private static final int DEFAULT_FONT_SIZE = 14;
     private static final Font DEFAULT_FONT = new Font("Andale Mono", Font.PLAIN, DEFAULT_FONT_SIZE);
     private static final int SHORTCUT_KEY_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
-    private static final Color LIGHT_GREY = new Color(245, 245, 245);
-    private static final Stack<VideEditorWindow> ALL_OPEN_WINDOWS = new Stack<>();
+    public static final Stack<VideEditorWindow> ALL_OPEN_WINDOWS = new Stack<>();
     private static final Map<String, VideEditorWindow> ALL_OPEN_FILES = new HashMap<>();
+    private static long NEW_FILE_INDEX = 0;
+    private static final String NEW_FILE_PATH_PREFIX = "@-New-File-";
 
     private final JFrame videWindow;
     private final JScrollPane editorScrollPane;
     private final VideEditorPane textEditorPane;
+    private final SyntaxHighlightDocumentListener syntaxHighlightDocumentListener;
     private final JTextArea lineNumbers;
-    private final JLabel statusLabel;
+    private final JTextArea statusLabel;
 
     private int fontSize;
     private Font font;
@@ -51,9 +56,11 @@ public class VideEditorWindow {
     private int fontHeight;
 
     private File currentFile;
+    private String currentFilePath;
     private String fileContents;
 
-    private final SyntaxHighlighter syntaxHighlighter;
+    private VideEditorTheme editorTheme;
+    private VikariSyntaxHighlighter vikariSyntaxHighlighter;
     private final UndoHistory undoHistory;
 
     private int linePosition;
@@ -72,6 +79,7 @@ public class VideEditorWindow {
      */
     public VideEditorWindow(Font videFont) {
         ALL_OPEN_WINDOWS.add(this);
+        editorTheme = Vide.getEditorTheme();
 
         videWindow = new JFrame(NEW_FILE_TITLE);
         JMenuBar videMenuBar = initVideMenuBar();
@@ -88,22 +96,21 @@ public class VideEditorWindow {
         textEditorPane.setFont(videFont);
         calculateFontMetrics();
 
+        lineNumbers = new JTextArea("1");
+        lineNumbers.setEditable(false);
+        lineNumbers.setFont(font);
+        lineNumbers.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, fontWidth));
+
         DefaultStyledDocument styledDocument = (DefaultStyledDocument)textEditorPane.getStyledDocument();
         styledDocument.setDocumentFilter(new TabsToSpacesDocumentFilter());
 
         undoHistory = new UndoHistory(styledDocument);
-        syntaxHighlighter = new SyntaxHighlighter(styledDocument);
+        vikariSyntaxHighlighter = Vide.getSyntaxHighlighter();
+        vikariSyntaxHighlighter.setEnabled(true);
 
-        lineNumbers = new JTextArea("1");
-        lineNumbers.setBackground(LIGHT_GREY);
-        lineNumbers.setForeground(Color.GRAY);
-        lineNumbers.setEditable(false);
-        lineNumbers.setEnabled(false);
-        lineNumbers.setFont(font);
-        lineNumbers.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, fontWidth));
-
-        styledDocument.addDocumentListener(new LineNumbersDocumentListener(textEditorPane, lineNumbers));
-        styledDocument.addDocumentListener(new SyntaxHighlightUndoHistoryDocumentListener(this));
+        VideDocumentListener videDocumentListener = new VideDocumentListener(this);
+        syntaxHighlightDocumentListener = videDocumentListener.getSyntaxHighlightListener();
+        styledDocument.addDocumentListener(videDocumentListener);
 
         // Update line and column info when the text caret position changes.
         textEditorPane.addCaretListener(event -> {
@@ -142,16 +149,18 @@ public class VideEditorWindow {
             throw new IllegalStateException("Unreachable code. ALL_OPEN_WINDOWS should never be empty.");
         }
 
-        statusLabel = new JLabel();
+        statusLabel = new JTextArea();
         statusLabel.setBorder(new EmptyBorder(2, 2, 2, 2));
-        statusLabel.setForeground(LIGHT_GREY);
-        statusLabel.setForeground(Color.DARK_GRAY);
         statusLabel.setFont(font.deriveFont(14.0f));
+        statusLabel.setEditable(false);
         contentPane.add(statusLabel, BorderLayout.SOUTH);
 
         // Initialize caret line and column position info in status label.
         updateLineColumnPosition(0);
         updateStatusLabel();
+
+        fileContents = "";
+        updateComponentColors();
     }
 
     public JFrame getVideWindow() {
@@ -162,12 +171,24 @@ public class VideEditorWindow {
         return textEditorPane;
     }
 
+    public JTextArea getLineNumbers() {
+        return lineNumbers;
+    }
+
     public String getFileContents() {
         return fileContents;
     }
 
     public void setFileContents(String fileContents) {
         this.fileContents = fileContents;
+    }
+
+    public String getCurrentFilePath() {
+        return currentFilePath;
+    }
+
+    public VikariSyntaxHighlighter getVikariSyntaxHighlighter() {
+        return vikariSyntaxHighlighter;
     }
 
     public UndoHistory getUndoHistory() {
@@ -276,6 +297,20 @@ public class VideEditorWindow {
         return toggleWordWrapMenuItem;
     }
 
+    private JMenuItem initToggleSyntaxHighlightingMenuItem() {
+        JMenuItem toggleWordWrapMenuItem = new JMenuItem("Toggle Syntax Highlighting");
+        toggleWordWrapMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, SHORTCUT_KEY_MASK | Event.SHIFT_MASK));
+        toggleWordWrapMenuItem.addActionListener(event -> toggleSyntaxHighlighting());
+        return toggleWordWrapMenuItem;
+    }
+
+    private JMenuItem initToggleDarkModeMenuItem() {
+        JMenuItem toggleDarkModeMenuItem = new JMenuItem("Toggle Dark Mode");
+        toggleDarkModeMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, SHORTCUT_KEY_MASK));
+        toggleDarkModeMenuItem.addActionListener(event -> toggleDarkMode());
+        return toggleDarkModeMenuItem;
+    }
+
     private JMenuBar initVideMenuBar() {
         // Create the "File" menu.
         JMenuItem newMenuItem = initNewMenuItem();
@@ -305,8 +340,13 @@ public class VideEditorWindow {
 
         // Create the "View" menu.
         JMenuItem toggleWordWrapMenuItem = initToggleWordWrapMenuItem();
+        JMenuItem toggleSyntaxHighlightingMenuItem = initToggleSyntaxHighlightingMenuItem();
+        JMenuItem toggleDarkModeMenuItem = initToggleDarkModeMenuItem();
+
         JMenu viewMenu = new JMenu("View");
         viewMenu.add(toggleWordWrapMenuItem);
+        viewMenu.add(toggleSyntaxHighlightingMenuItem);
+        viewMenu.add(toggleDarkModeMenuItem);
 
         JMenuBar videMenuBar = new JMenuBar();
         videMenuBar.add(fileMenu);
@@ -340,10 +380,6 @@ public class VideEditorWindow {
 
         String result = sb.toString();
         statusLabel.setText(result);
-    }
-
-    public boolean isStarted() {
-        return videWindow.isVisible();
     }
 
     /**
@@ -386,14 +422,25 @@ public class VideEditorWindow {
         videWindow.setVisible(true);
     }
 
+    private String getCanonicalFilePath(File file) {
+        try {
+            return file.getCanonicalPath();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void setCurrentFile(File currentFile) {
         this.currentFile = currentFile;
+        this.currentFilePath = getCanonicalFilePath(currentFile);
         updateWindowTitleWithFilename(currentFile);
         storeInFileCache(currentFile);
     }
 
     public void loadFile(File file) {
         this.currentFile = file;
+        this.currentFilePath = getCanonicalFilePath(currentFile);
+        System.out.println(currentFilePath);
         try {
             fileContents = Files.readString(currentFile.toPath());
         } catch (IOException e) {
@@ -401,12 +448,15 @@ public class VideEditorWindow {
         }
 
         undoHistory.setEnabled(false);
+        vikariSyntaxHighlighter.setEnabled(false);
         textEditorPane.setText(fileContents);
         textEditorPane.setCaretPosition(0);
         undoHistory.setEnabled(true);
+        vikariSyntaxHighlighter.setEnabled(true);
 
         updateWindowTitleWithFilename(currentFile);
         storeInFileCache(currentFile);
+        vikariSyntaxHighlighter.highlightEntireFile(currentFilePath, fileContents, textEditorPane);
     }
 
     /**
@@ -415,6 +465,7 @@ public class VideEditorWindow {
     public void newFile() {
         VideEditorWindow videEditorWindow = new VideEditorWindow(font);
         videEditorWindow.start();
+        videEditorWindow.initNewFilePath();
     }
 
     /**
@@ -512,13 +563,17 @@ public class VideEditorWindow {
         // Dispose the current window's assets.
         undoHistory.clear();
         undoHistory.setEnabled(false);
+        vikariSyntaxHighlighter.setEnabled(false);
         fileContents = "";
         textEditorPane.setText(fileContents);
         undoHistory.setEnabled(true);
 
         // Clear the file info, and the entry in the file cache.
         removeFromFileCache(currentFile);
+        vikariSyntaxHighlighter.closeFile(currentFilePath);
+        vikariSyntaxHighlighter.setEnabled(true);
         currentFile = null;
+        currentFilePath = null;
 
         // Dispose of the window if it is not the last one.
         if (ALL_OPEN_WINDOWS.size() > 1) {
@@ -670,71 +725,87 @@ public class VideEditorWindow {
         editorScrollPane.setViewportView(textEditorPane);
     }
 
-    public int getIndexOfNewlineBefore(int position) {
-        if (!fileContents.isEmpty()) {
-            for (int i = position - 1; i >= 0; i--) {
-                char c = fileContents.charAt(i);
-                if (c == '\n') {
-                    return i + 1;
-                }
-            }
+    /**
+     * Perform the "Toggle Word Wrap" menu item.
+     */
+    public void toggleSyntaxHighlighting() {
+        boolean newValue = !vikariSyntaxHighlighter.isEnabled();
+        vikariSyntaxHighlighter.setEnabled(newValue);
+    }
+
+    /**
+     * Perform the "Toggle Dark Mode" menu item.
+     */
+    public void toggleDarkMode() {
+        // Load the color theme.
+        VideEditorTheme videEditorTheme = Vide.getEditorTheme();
+        VideColorTheme.WindowColorTheme colorTheme = videEditorTheme.getWindowColorTheme();
+
+        if (colorTheme == VideColorTheme.WindowColorTheme.LIGHT_MODE) {
+            Vide.loadVideColorTheme("color_theme_dark.json");
+        } else if (colorTheme == VideColorTheme.WindowColorTheme.DARK_MODE) {
+            Vide.loadVideColorTheme("color_theme_light.json");
+        } else {
+            throw new IllegalStateException("Unexpected color theme: "  + colorTheme);
         }
-        return 0;
-    }
 
-    public int getIndexOfNewlineAfter(int position) {
-        int index = fileContents.indexOf('\n', position);
-        if (index == -1) {
-            index = fileContents.length();
-        } else if (fileContents.charAt(position) == '\n') {
-            return position;
+        Vide.reportColorDefinitionErrors();
+
+        // Update all open editor windows.
+        for (VideEditorWindow editorWindow : ALL_OPEN_WINDOWS) {
+
+            // Update the editor's displayed colors.
+            editorWindow.editorTheme = Vide.getEditorTheme();
+            editorWindow.vikariSyntaxHighlighter = Vide.getSyntaxHighlighter();
+            syntaxHighlightDocumentListener.setSyntaxHighlighter(editorWindow.vikariSyntaxHighlighter);
+
+            SwingUtilities.invokeLater(() -> {
+                editorWindow.updateComponentColors();
+                editorWindow.vikariSyntaxHighlighter.setEnabled(true);
+                editorWindow.vikariSyntaxHighlighter.highlightEntireFile(currentFilePath, fileContents, textEditorPane);
+            });
         }
-        return index;
     }
 
-    public void syntaxHighlightCurrentLine(int offset) {
-        int startIndex = getIndexOfNewlineBefore(offset);
-        int endIndex = getIndexOfNewlineAfter(offset);
+    /**
+     * Apply a new color theme's styling to the UI components.
+     */
+    private void updateComponentColors() {
+        textEditorPane.setCaretColor(editorTheme.getCaretColor());
+        textEditorPane.setSelectionColor(editorTheme.getHighlightColor());
+        textEditorPane.setForeground(editorTheme.getTextEditorFg());
+        textEditorPane.setBackground(editorTheme.getTextEditorBg());
+        lineNumbers.setForeground(editorTheme.getLineNumbersFg());
+        lineNumbers.setBackground(editorTheme.getLineNumbersBg());
+        statusLabel.setForeground(editorTheme.getStatusLabelFg());
+        statusLabel.setBackground(editorTheme.getStatusLabelBg());
+        editorScrollPane.setForeground(editorTheme.getLineNumbersFg());
+        editorScrollPane.setBackground(editorTheme.getLineNumbersBg());
 
-        SwingUtilities.invokeLater(() -> {
-            try {
-                syntaxHighlighter.highlight(startIndex, endIndex);
-            } catch (IndexOutOfBoundsException e) {
-                // Silently fail because too many removal updates were applied all at once to
-                // the editorTextPane. (Can't syntax-highlight regions that no longer exist.)
-            }
-        });
+        editorScrollPane.setBorder(new EmptyBorder(0, 0, 0, 0));
     }
 
-    public void syntaxHighlightRegion(int startRegion, int endRegion) {
-        int startIndex = getIndexOfNewlineBefore(startRegion);
-        int endIndex = getIndexOfNewlineAfter(endRegion);
-
-        SwingUtilities.invokeLater(() -> {
-            try {
-                syntaxHighlighter.highlight(startIndex, endIndex);
-            } catch (IndexOutOfBoundsException e) {
-                // Silently fail because too many removal updates were applied all at once to
-                // the editorTextPane. (Can't syntax-highlight regions that no longer exist.)
-            }
-        });
-    }
-
-    public void addInsertTextUndoHistoryItem(int offset, int length, String addedText) {
-        int startCursor = offset;
-        int endCursor = offset + length;
+    public void addInsertTextUndoHistoryItem(int startOffset, int length, String addedText) {
+        int endOffset = startOffset + length;
 
         UndoHistoryItem newInsertItem = new UndoHistoryItem(UndoHistoryItemType.INSERT_TEXT,
-                startCursor, endCursor, addedText);
+                startOffset, endOffset, addedText);
         undoHistory.addHistoryItem(newInsertItem);
     }
 
-    public void addRemoveTextUndoHistoryItem(int offset, int length, String removedText) {
-        int startCursor = offset;
-        int endCursor = offset + length;
+    public void addRemoveTextUndoHistoryItem(int startOffset, int length, String removedText) {
+        int endOffset = startOffset + length;
 
         UndoHistoryItem newInsertItem = new UndoHistoryItem(UndoHistoryItemType.REMOVE_TEXT,
-                startCursor, endCursor, removedText);
+                startOffset, endOffset, removedText);
         undoHistory.addHistoryItem(newInsertItem);
+    }
+
+    private String generateNewFilePath() {
+        return NEW_FILE_PATH_PREFIX + NEW_FILE_INDEX++;
+    }
+
+    public void initNewFilePath() {
+        currentFilePath = generateNewFilePath();
     }
 }

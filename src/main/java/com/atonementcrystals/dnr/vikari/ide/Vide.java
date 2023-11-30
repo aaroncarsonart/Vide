@@ -1,15 +1,24 @@
 package com.atonementcrystals.dnr.vikari.ide;
 
 import com.atonementcrystals.dnr.vikari.ide.gui.VideEditorWindow;
+import com.atonementcrystals.dnr.vikari.ide.parsing.VideColorTheme;
+import com.atonementcrystals.dnr.vikari.ide.parsing.VideColorThemeProcessor;
+import com.atonementcrystals.dnr.vikari.ide.parsing.VideEditorTheme;
+import com.atonementcrystals.dnr.vikari.ide.parsing.VikariSyntaxHighlighter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 
 /**
  * Main class of the Vikari IDE.
  */
 public class Vide {
+    private static VideEditorTheme videEditorTheme;
+    private static VikariSyntaxHighlighter vikariSyntaxHighlighter;
+    private static VideColorThemeProcessor videColorThemeProcessor;
 
     /**
      * Entry point function of program.
@@ -17,16 +26,34 @@ public class Vide {
      */
     public static void main(String[] args) {
         setAppleLookAndFeel();
+        loadDefaultVideColorTheme();
 
+        // Open a single Vide editor window.
         if (args.length == 0) {
-            javax.swing.SwingUtilities.invokeLater(() -> newVideEditorWindow(null));
-        } else {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                newVideEditorWindow(null);
+                reportColorDefinitionErrors();
+            });
+        }
+
+        // Open each specified file in a new Vide editor window.
+        else {
             javax.swing.SwingUtilities.invokeLater(() -> {
                 for (String filename : args) {
                     newVideEditorWindow(filename);
                 }
+                reportColorDefinitionErrors();
             });
         }
+
+    }
+
+    public static VideEditorTheme getEditorTheme() {
+        return videEditorTheme;
+    }
+
+    public static VikariSyntaxHighlighter getSyntaxHighlighter() {
+        return vikariSyntaxHighlighter;
     }
 
     /**
@@ -39,6 +66,7 @@ public class Vide {
         if (filename == null) {
             VideEditorWindow videEditorWindow = new VideEditorWindow();
             videEditorWindow.start();
+            videEditorWindow.initNewFilePath();
             return;
         }
         File currentFile = new File(filename);
@@ -68,21 +96,62 @@ public class Vide {
                 // Attempt to create the new file.
                 try {
                     currentFile.createNewFile();
+
+                    // Attach the file to the editor window. (As it is empty, it is not loaded.)
+                    videEditorWindow.setCurrentFile(currentFile);
                 } catch (IOException | SecurityException e) {
                     JOptionPane.showMessageDialog(videEditorWindow.getVideWindow(), "New file error",
                             "Error creating new file.", JOptionPane.ERROR_MESSAGE);
-                }
 
-                // Attach the file to the editor window. (As it is empty, it is not loaded.)
-                videEditorWindow.setCurrentFile(currentFile);
+                    // Initialize with the default new file path string, instead.
+                    videEditorWindow.initNewFilePath();
+                }
             }
         }
+    }
+
+    private static void loadDefaultVideColorTheme() {
+        loadVideColorTheme("color_theme_light.json");
+    }
+
+    public static void loadVideColorTheme(String filePath) {
+        VideColorTheme videColorTheme = loadVideColorThemeFromResources(filePath);
+        videEditorTheme = new VideEditorTheme();
+        vikariSyntaxHighlighter = new VikariSyntaxHighlighter();
+        videColorThemeProcessor = new VideColorThemeProcessor(videColorTheme, videEditorTheme, vikariSyntaxHighlighter);
+        vikariSyntaxHighlighter.loadColorNames(videColorThemeProcessor.getNamedColors());
+    }
+
+    private static VideColorTheme loadVideColorThemeFromResources(String filePath) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            URL colorThemeURL = Vide.class.getClassLoader().getResource(filePath);
+            VideColorTheme videColorTheme = objectMapper.readValue(colorThemeURL, VideColorTheme.class);
+            videColorTheme.setFilePath(filePath);
+            return videColorTheme;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void reportColorDefinitionErrors() {
+        // Report any errors, if necessary.
+        if (videColorThemeProcessor.hasColorDefinitionErrors()) {
+            VideEditorWindow topEditorWindow = VideEditorWindow.ALL_OPEN_WINDOWS.peek();
+            videColorThemeProcessor.reportColorDefinitionErrors(topEditorWindow.getVideWindow());
+        }
+        // Unload the color theme processor after it is no longer needed.
+        videColorThemeProcessor = null;
     }
 
     /**
      * TODO: Support cross-platform system-dependent look and feel for different operating systems.
      */
     private static void setAppleLookAndFeel() {
+        System.setProperty("apple.laf.useScreenMenuBar", "true");
+        System.setProperty("com.apple.mrj.application.apple.menu.about.name", "VIDE");
+        System.setProperty("apple.awt.application.name", "VIDE");
+        System.setProperty("apple.awt.application.appearance", "system");
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 
@@ -90,8 +159,5 @@ public class Vide {
                  UnsupportedLookAndFeelException e) {
             throw new RuntimeException(e);
         }
-        System.setProperty("apple.laf.useScreenMenuBar", "true");
-        System.setProperty("com.apple.mrj.application.apple.menu.about.name", "VIDE");
-        System.setProperty("apple.awt.application.name", "VIDE");
     }
 }

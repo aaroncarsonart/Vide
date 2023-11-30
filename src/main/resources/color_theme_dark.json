@@ -1,0 +1,116 @@
+{
+    "name": "Vide Dark",
+    "colors": {
+        "white": {
+            "r": 255,
+            "g": 255,
+            "b": 255
+        },
+        "black": {
+            "r": 0,
+            "g": 0,
+            "b": 0
+        },
+        "lightGrey": {
+            "r": 192,
+            "g": 192,
+            "b": 192
+        },
+        "lighterGrey": {
+            "r": 245,
+            "g": 245,
+            "b": 245
+        },
+        "grey": {
+            "r": 128,
+            "g": 128,
+            "b": 128
+        },
+        "darkGrey": {
+            "r": 64,
+            "g": 64,
+            "b": 64
+        },
+        "darkGrey2": {
+            "r": 52,
+            "g": 52,
+            "b": 52
+        },
+        "darkerGrey": {
+            "r": 32,
+            "g": 32,
+            "b": 32
+        },
+        "blue": {
+            "r": 67,
+            "g": 154,
+            "b": 246
+        },
+        "orange": {
+            "r": 255,
+            "g": 138,
+            "b": 57
+        },
+        "red": {
+            "r": 255,
+            "g": 70,
+            "b": 46
+        },
+        "green": {
+            "r": 109,
+            "g": 226,
+            "b": 68
+        },
+        "yellow": {
+            "r": 250,
+            "g": 226,
+            "b": 50
+        },
+        "purple": {
+            "r": 189,
+            "g": 99,
+            "b": 255
+        },
+        "pink": {
+            "r": 247,
+            "g": 43,
+            "b": 255
+        },
+        "maroon": {
+            "r": 197,
+            "g": 56,
+            "b": 131
+        }
+    },
+    "rules": {
+        "VARIABLE": "white",
+        "CONSTANT": "pink",
+        "CONSTANT_BRACKETS": "maroon",
+        "TYPE": "green",
+        "TYPE_KEYWORD": "blue",
+        "ANNOTATION": "maroon",
+        "COLLECTION_LITERAL": "blue",
+        "PUNCTUATION": "orange",
+        "CONTROL_FLOW": "orange",
+        "OPERATORS": "red",
+        "SEPARATORS": "blue",
+        "LITERALS": "purple",
+        "SWORD": "white",
+        "QUOTED_IDENTIFIER": "blue",
+        "COMMENT": "blue",
+        "FIELD_ACCESS": "blue",
+        "FUNCTION_DECLARATION": "green",
+        "INDEX_OPERATOR": "green"
+    },
+    "editor": {
+        "windowColorTheme": "DARK_MODE",
+        "caretColor": "white",
+        "highlightColor": "darkGrey2",
+        "textEditorFg": "white",
+        "textEditorBg": "darkerGrey",
+        "lineNumbersFg": "lightGrey",
+        "lineNumbersBg": "darkGrey",
+        "statusLabelFg": "lightGrey",
+        "statusLabelBg": "darkGrey"
+    }
+}

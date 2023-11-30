@@ -1,6 +1,7 @@
 package com.atonementcrystals.dnr.vikari.ide.gui.document;
 
 import com.atonementcrystals.dnr.vikari.ide.gui.VideEditorPane;
+import com.atonementcrystals.dnr.vikari.ide.gui.VideEditorWindow;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -16,9 +17,9 @@ public class LineNumbersDocumentListener implements DocumentListener {
     private final VideEditorPane textEditorPane;
     private final JTextArea lineNumbers;
 
-    public LineNumbersDocumentListener(VideEditorPane textEditorPane, JTextArea lineNumbers) {
-        this.textEditorPane = textEditorPane;
-        this.lineNumbers = lineNumbers;
+    public LineNumbersDocumentListener(VideEditorWindow videEditorWindow) {
+        this.textEditorPane = videEditorWindow.getTextEditorPane();
+        this.lineNumbers = videEditorWindow.getLineNumbers();
     }
 
     public String getLineNumbersText() {
@@ -32,11 +33,16 @@ public class LineNumbersDocumentListener implements DocumentListener {
             lineCount++;
         }
 
-        String text = "1" + System.getProperty("line.separator");
+        StringBuilder sb = new StringBuilder();
+        sb.append("1");
+        sb.append(System.getProperty("line.separator"));
+
         for(int i = 2; i <= lineCount; i++) {
-            text += i + System.getProperty("line.separator");
+            sb.append(i);
+            sb.append(System.getProperty("line.separator"));
         }
-        return text;
+
+        return sb.toString();
     }
 
     private void updateLineNumbers() {

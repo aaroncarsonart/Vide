@@ -10,15 +10,14 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.StyledDocument;
 
 /**
- * For managing updates related to the SyntaxHighlighter and UndoHistory components of a
- * VideEditorWindow.
+ * For managing updates related to the UndoHistory component of a VideEditorWindow.
  */
-public class SyntaxHighlightUndoHistoryDocumentListener implements DocumentListener {
+public class UndoHistoryDocumentListener implements DocumentListener {
     private final VideEditorWindow videEditorWindow;
     private final VideEditorPane textEditorPane;
     private final UndoHistory undoHistory;
 
-    public SyntaxHighlightUndoHistoryDocumentListener(VideEditorWindow videEditorWindow) {
+    public UndoHistoryDocumentListener(VideEditorWindow videEditorWindow) {
         this.videEditorWindow = videEditorWindow;
         this.textEditorPane = videEditorWindow.getTextEditorPane();
         this.undoHistory = videEditorWindow.getUndoHistory();
@@ -47,9 +46,6 @@ public class SyntaxHighlightUndoHistoryDocumentListener implements DocumentListe
             // TODO: Detect edits greater than length 1 and finalize previous edit before adding them.
             videEditorWindow.addInsertTextUndoHistoryItem(offset, length, addedText);
         }
-        // syntax color highlighting
-        videEditorWindow.setFileContents(textEditorPane.getText());
-        videEditorWindow.syntaxHighlightRegion(offset, offset + length);
     }
 
     @Override
@@ -71,8 +67,5 @@ public class SyntaxHighlightUndoHistoryDocumentListener implements DocumentListe
             // TODO: Detect edits greater than length 1 and finalize previous edit before adding them.
             videEditorWindow.addRemoveTextUndoHistoryItem(startIndex, length, removedText);
         }
-        // syntax color highlighting
-        videEditorWindow.setFileContents(textEditorPane.getText());
-        videEditorWindow.syntaxHighlightCurrentLine(documentEvent.getOffset());
     }
 }

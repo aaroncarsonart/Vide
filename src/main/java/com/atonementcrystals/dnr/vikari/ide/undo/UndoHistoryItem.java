@@ -51,6 +51,7 @@ public class UndoHistoryItem {
         return modifiedText;
     }
 
+    @SuppressWarnings("unused")
     public boolean isFinished() {
         return finished;
     }

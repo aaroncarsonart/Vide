@@ -1,0 +1,106 @@
+{
+    "name": "Vide Light",
+    "colors": {
+        "white": {
+            "r": 255,
+            "g": 255,
+            "b": 255
+        },
+        "black": {
+            "r": 0,
+            "g": 0,
+            "b": 0
+        },
+        "lighterGrey": {
+            "r": 245,
+            "g": 245,
+            "b": 245
+        },
+        "lightGrey": {
+            "r": 224,
+            "g": 224,
+            "b": 224
+        },
+        "grey": {
+            "r": 128,
+            "g": 128,
+            "b": 128
+        },
+        "darkGrey": {
+            "r": 64,
+            "g": 64,
+            "b": 64
+        },
+        "blue": {
+            "r": 0,
+            "g": 118,
+            "b": 186
+        },
+        "orange": {
+            "r": 242,
+            "g": 114,
+            "b": 0
+        },
+        "red": {
+            "r": 238,
+            "g": 34,
+            "b": 12
+        },
+        "green": {
+            "r": 29,
+            "g": 177,
+            "b": 0
+        },
+        "yellow": {
+            "r": 194,
+            "g": 190,
+            "b": 84
+        },
+        "purple": {
+            "r": 150,
+            "g": 70,
+            "b": 194
+        },
+        "pink": {
+            "r": 249,
+            "g": 92,
+            "b": 178
+        },
+        "maroon": {
+            "r": 172,
+            "g": 64,
+            "b": 116
+        }
+    },
+    "rules": {
+        "VARIABLE": "black",
+        "CONSTANT": "pink",
+        "CONSTANT_BRACKETS": "maroon",
+        "TYPE": "green",
+        "TYPE_KEYWORD": "blue",
+        "ANNOTATION": "maroon",
+        "COLLECTION_LITERAL": "blue",
+        "PUNCTUATION": "orange",
+        "CONTROL_FLOW": "orange",
+        "OPERATORS": "red",
+        "SEPARATORS": "blue",
+        "LITERALS": "purple",
+        "SWORD": "black",
+        "QUOTED_IDENTIFIER": "blue",
+        "COMMENT": "blue",
+        "FIELD_ACCESS": "blue",
+        "FUNCTION_DECLARATION": "green",
+        "INDEX_OPERATOR": "green"
+    },
+    "editor": {
+        "windowColorTheme": "LIGHT_MODE",
+        "caretColor": "black",
+        "highlightColor": "lightGrey",
+        "textEditorFg": "black",
+        "textEditorBg": "white",
+        "lineNumbersFg": "grey",
+        "lineNumbersBg": "lighterGrey",
+        "statusLabelFg": "darkGrey",
+        "statusLabelBg": "white"
+    }
+}
