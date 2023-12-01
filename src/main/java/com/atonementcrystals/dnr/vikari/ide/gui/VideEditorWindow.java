@@ -13,6 +13,7 @@ import com.atonementcrystals.dnr.vikari.ide.undo.UndoHistoryItemType;
 import com.atonementcrystals.dnr.vikari.ide.util.CustomHTMLWriter;
 import com.atonementcrystals.dnr.vikari.ide.util.GlobalUserSettings;
 import com.atonementcrystals.dnr.vikari.ide.util.HTMLTransferable;
+import org.apache.commons.io.FilenameUtils;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -468,38 +469,51 @@ public class VideEditorWindow {
         videEditorWindow.initNewFilePath();
     }
 
+    private boolean validateFileExtensions(File directory, String filename) {
+        String fileExtension = FilenameUtils.getExtension(filename);
+        return fileExtension.equals("DNR") || fileExtension.equals("dnr");
+    }
+
     /**
      * Performs the "Open" menu item action.
      */
     public void open() {
-        // TODO: Try using FileDialog instead of JFileChooser to force a native window look.
         String lastViewedDirectory = GlobalUserSettings.getLastViewedDirectory();
-        JFileChooser fileChooser = new JFileChooser(lastViewedDirectory);
 
-        int result = fileChooser.showOpenDialog(videWindow);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File currentFile = fileChooser.getSelectedFile();
-            GlobalUserSettings.setLastViewedDirectory(currentFile.getParent());
+        FileDialog fileDialog = new FileDialog(videWindow, "Open", FileDialog.LOAD);
+        fileDialog.setDirectory(lastViewedDirectory);
+        fileDialog.setFilenameFilter(this::validateFileExtensions);
+        fileDialog.setMultipleMode(true);
+        fileDialog.setVisible(true);
 
+        File[] selectedFiles = fileDialog.getFiles();
+
+        if (selectedFiles.length > 0) {
+            File firstFile = selectedFiles[0];
+            GlobalUserSettings.setLastViewedDirectory(firstFile.getParent());
+        }
+
+        for (File selectedFile : selectedFiles) {
             // If the file is already open, simply request focus on that existing window.
-            if (isFileIsAlreadyOpen(currentFile)) {
-                VideEditorWindow existingWindow = getOpenEditorWindowFor(currentFile);
+            if (isFileIsAlreadyOpen(selectedFile)) {
+                VideEditorWindow existingWindow = getOpenEditorWindowFor(selectedFile);
                 existingWindow.videWindow.requestFocus();
             }
 
             // Load the new file in the current active window.
             else if (isReadyForOpenedFile()) {
-                loadFile(currentFile);
+                loadFile(selectedFile);
             }
 
             // Otherwise, create a new editor window, if necessary.
             else {
                 VideEditorWindow newEditorWindow = new VideEditorWindow(font);
                 newEditorWindow.start();
-                newEditorWindow.loadFile(currentFile);
+                newEditorWindow.loadFile(selectedFile);
             }
         }
     }
+
 
     /**
      * Performs the "Save" menu item action.
@@ -507,12 +521,18 @@ public class VideEditorWindow {
     public void save() {
         if (currentFile == null) {
             String lastViewedDirectory = GlobalUserSettings.getLastViewedDirectory();
-            JFileChooser fileChooser = new JFileChooser(lastViewedDirectory);
-            int result = fileChooser.showSaveDialog(videWindow);
-            if (result == JFileChooser.APPROVE_OPTION) {
+
+            FileDialog fileDialog = new FileDialog(videWindow, "Save", FileDialog.SAVE);
+            fileDialog.setDirectory(lastViewedDirectory);
+            fileDialog.setFilenameFilter(this::validateFileExtensions);
+            fileDialog.setVisible(true);
+
+            // Length will always be 1 or 0.
+            File[] selectedFiles = fileDialog.getFiles();
+            if (selectedFiles.length == 1) {
                 removeFromFileCache(currentFile);
 
-                currentFile = fileChooser.getSelectedFile();
+                currentFile = selectedFiles[0];
                 GlobalUserSettings.setLastViewedDirectory(currentFile.getParent());
                 saveFile(currentFile);
 
@@ -527,12 +547,18 @@ public class VideEditorWindow {
      */
     public void saveAs() {
         String lastViewedDirectory = GlobalUserSettings.getLastViewedDirectory();
-        JFileChooser fileChooser = new JFileChooser(lastViewedDirectory);
-        int result = fileChooser.showSaveDialog(videWindow);
-        if (result == JFileChooser.APPROVE_OPTION) {
+
+        FileDialog fileDialog = new FileDialog(videWindow, "Save As", FileDialog.SAVE);
+        fileDialog.setDirectory(lastViewedDirectory);
+        fileDialog.setFilenameFilter(this::validateFileExtensions);
+        fileDialog.setVisible(true);
+
+        // Length will always be 1 or 0.
+        File[] selectedFiles = fileDialog.getFiles();
+        if (selectedFiles.length == 1) {
             removeFromFileCache(currentFile);
 
-            currentFile = fileChooser.getSelectedFile();
+            currentFile = selectedFiles[0];
             GlobalUserSettings.setLastViewedDirectory(currentFile.getParent());
             saveFile(currentFile);
 
