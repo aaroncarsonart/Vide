@@ -17,11 +17,13 @@ import org.apache.commons.io.FilenameUtils;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.ColorUIResource;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.StyledDocument;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
+import java.awt.desktop.QuitHandler;
 import java.awt.event.*;
 import java.io.*;
 import java.nio.file.Files;
@@ -43,8 +45,10 @@ public class VideEditorWindow {
     private static final Map<String, VideEditorWindow> ALL_OPEN_FILES = new HashMap<>();
     private static long NEW_FILE_INDEX = 0;
     private static final String NEW_FILE_PATH_PREFIX = "@-New-File-";
+    private static QuitHandler quitHandler;
 
     private final JFrame videWindow;
+    private final VideWindowAdapter videWindowAdapter;
     private final JScrollPane editorScrollPane;
     private final VideEditorPane textEditorPane;
     private final SyntaxHighlightDocumentListener syntaxHighlightDocumentListener;
@@ -59,10 +63,12 @@ public class VideEditorWindow {
     private File currentFile;
     private String currentFilePath;
     private String fileContents;
+    private boolean edited;
 
     private VideEditorTheme editorTheme;
     private VikariSyntaxHighlighter vikariSyntaxHighlighter;
     private final UndoHistory undoHistory;
+    private int undoHistoryUneditedPosition;
 
     private int linePosition;
     private int columnPosition;
@@ -86,7 +92,8 @@ public class VideEditorWindow {
         JMenuBar videMenuBar = initVideMenuBar();
         videWindow.setJMenuBar(videMenuBar);
         videWindow.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        videWindow.addWindowListener(new VideWindowAdapter());
+        videWindowAdapter = new VideWindowAdapter();
+        videWindow.addWindowListener(videWindowAdapter);
         videWindow.addWindowFocusListener(new VideWindowFocusListener());
 
         this.font = videFont;
@@ -124,6 +131,7 @@ public class VideEditorWindow {
         editorScrollPane.setRowHeaderView(lineNumbers);
         editorScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         editorScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        editorScrollPane.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         JScrollBar verticalScrollBar = editorScrollPane.getVerticalScrollBar();
         verticalScrollBar.setUnitIncrement(fontHeight);
@@ -161,6 +169,8 @@ public class VideEditorWindow {
         updateStatusLabel();
 
         fileContents = "";
+        edited = false;
+        undoHistoryUneditedPosition = undoHistory.getPosition();
         updateComponentColors();
     }
 
@@ -182,6 +192,17 @@ public class VideEditorWindow {
 
     public void setFileContents(String fileContents) {
         this.fileContents = fileContents;
+    }
+
+    public void setEdited(boolean edited) {
+        if (this.edited != edited) {
+            this.edited = edited;
+            if (currentFile != null) {
+                updateWindowTitleWithFilename(currentFile);
+            } else {
+                videWindow.setTitle(NEW_FILE_TITLE + (edited ? " - edited" : ""));
+            }
+        }
     }
 
     public String getCurrentFilePath() {
@@ -265,9 +286,51 @@ public class VideEditorWindow {
 
     private JMenuItem initQuitMenuItem() {
         JMenuItem quitMenuItem = new JMenuItem("Quit");
-        quitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, SHORTCUT_KEY_MASK));
-        quitMenuItem.addActionListener(event -> System.exit(0));
+
+        // Handle the Quit command with a QuitHandler if the system supports it.
+        if (Desktop.isDesktopSupported()) {
+            if (quitHandler == null) {
+                quitHandler = createVideQuitHandler();
+                Desktop desktop = Desktop.getDesktop();
+                desktop.setQuitHandler(quitHandler);
+            }
+        }
+
+        // Otherwise, set the Ctrl+Q/Cmd+Q keyboard shortcut to this Quit menu item.
+        else {
+            quitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, SHORTCUT_KEY_MASK));
+        }
+
+        // Allow handling the Quit command directly via this Quit menu item.
+        quitMenuItem.addActionListener(createVideQuitMenuActionListener());
+
         return quitMenuItem;
+    }
+
+    /**
+     * For systems that support {@link Desktop}, manage quit requests with a {@link QuitHandler}.
+     * @return The QuitHandler to handle quit events for Vide.
+     */
+    private static QuitHandler createVideQuitHandler() {
+        return (quitEvent, quitResponse) -> {
+            if (quit()) {
+                quitResponse.performQuit();
+            } else {
+                quitResponse.cancelQuit();
+            }
+        };
+    }
+
+    /**
+     * For systems that do not support {@link Desktop}, manage quit events with an {@link MenuItem} {@link ActionListener}.
+     * @return The ActionListener to handle quit events for Vide.
+     */
+    private static ActionListener createVideQuitMenuActionListener() {
+        return actionEvent -> {
+            if(quit()) {
+                System.exit(0);
+            }
+        };
     }
 
     private JMenuItem initUndoMenuItem() {
@@ -320,6 +383,7 @@ public class VideEditorWindow {
         JMenuItem saveAsMenuItem = initSaveAsMenuItem();
         JMenuItem closeMenuItem = initCloseMenuItem();
         JMenuItem quitMenuItem = initQuitMenuItem();
+
 
         JMenu fileMenu = new JMenu("File");
         fileMenu.add(newMenuItem);
@@ -421,6 +485,7 @@ public class VideEditorWindow {
         // Begin to track edits and display the window.
         undoHistory.setEnabled(true);
         videWindow.setVisible(true);
+        textEditorPane.requestFocusInWindow();
     }
 
     private String getCanonicalFilePath(File file) {
@@ -455,6 +520,7 @@ public class VideEditorWindow {
         undoHistory.setEnabled(true);
         vikariSyntaxHighlighter.setEnabled(true);
 
+        edited = false;
         updateWindowTitleWithFilename(currentFile);
         storeInFileCache(currentFile);
         vikariSyntaxHighlighter.highlightEntireFile(currentFilePath, fileContents, textEditorPane);
@@ -518,12 +584,13 @@ public class VideEditorWindow {
     /**
      * Performs the "Save" menu item action.
      */
-    public void save() {
+    public boolean save() {
         if (currentFile == null) {
             String lastViewedDirectory = GlobalUserSettings.getLastViewedDirectory();
 
             FileDialog fileDialog = new FileDialog(videWindow, "Save", FileDialog.SAVE);
             fileDialog.setDirectory(lastViewedDirectory);
+            fileDialog.setFile("Untitled.DNR");
             fileDialog.setFilenameFilter(this::validateFileExtensions);
             fileDialog.setVisible(true);
 
@@ -537,9 +604,12 @@ public class VideEditorWindow {
                 saveFile(currentFile);
 
                 storeInFileCache(currentFile);
+                return true;
             }
+            return false;
         } else {
             saveFile(currentFile);
+            return true;
         }
     }
     /**
@@ -550,6 +620,7 @@ public class VideEditorWindow {
 
         FileDialog fileDialog = new FileDialog(videWindow, "Save As", FileDialog.SAVE);
         fileDialog.setDirectory(lastViewedDirectory);
+        fileDialog.setFile("Untitled.DNR");
         fileDialog.setFilenameFilter(this::validateFileExtensions);
         fileDialog.setVisible(true);
 
@@ -575,7 +646,9 @@ public class VideEditorWindow {
             fileContents = textEditorPane.getText();
             writer.write(fileContents);
             writer.flush();
+            edited = false;
             updateWindowTitleWithFilename(currentFile);
+            undoHistoryUneditedPosition = undoHistory.getPosition();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -584,8 +657,37 @@ public class VideEditorWindow {
     /**
      * Dispose of this editor window's resources, and then finally close the window. Unless it is
      * the last open editor window, in which case it then becomes an editor for a new empty file.
+     * @return {@link JOptionPane#YES_OPTION}, {@link JOptionPane#NO_OPTION}, or {@link JOptionPane#CANCEL_OPTION},
+     *         based on if the open file was saved, was not saved, or cancel was selected.
      */
-    public void close() {
+    public int close() {
+        if (edited) {
+            JOptionPane jOptionPane = new JOptionPane("Save before closing?", JOptionPane.QUESTION_MESSAGE,
+                    JOptionPane.YES_NO_CANCEL_OPTION);
+            JDialog jDialog = jOptionPane.createDialog(videWindow, "");
+            jDialog.setLocationRelativeTo(videWindow);
+            jDialog.setVisible(true);
+            if (jOptionPane.getValue() instanceof Integer selectedValue) {
+                if (selectedValue == JOptionPane.YES_OPTION) {
+                    boolean saved = save();
+                    if (saved) {
+                        closeEditorWindow();
+                        return JOptionPane.YES_OPTION;
+                    }
+                    return JOptionPane.CANCEL_OPTION;
+                } else if (selectedValue == JOptionPane.NO_OPTION) {
+                    closeEditorWindow();
+                    return JOptionPane.NO_OPTION;
+                }
+            }
+            return JOptionPane.CANCEL_OPTION;
+        } else {
+            closeEditorWindow();
+            return JOptionPane.NO_OPTION;
+        }
+    }
+
+    private void closeEditorWindow() {
         // Dispose the current window's assets.
         undoHistory.clear();
         undoHistory.setEnabled(false);
@@ -601,16 +703,15 @@ public class VideEditorWindow {
         currentFile = null;
         currentFilePath = null;
 
-        // Dispose of the window if it is not the last one.
-        if (ALL_OPEN_WINDOWS.size() > 1) {
-            videWindow.setVisible(false);
-            videWindow.dispose();
-            ALL_OPEN_WINDOWS.remove(this);
-        }
+        // Dispose of the window.
+        videWindow.setVisible(false);
+        videWindow.removeWindowListener(videWindowAdapter);
+        videWindow.dispose();
+        ALL_OPEN_WINDOWS.remove(this);
 
-        // Otherwise, reuse the final window as a new file editor, instead.
-        else {
-            videWindow.setTitle(NEW_FILE_TITLE);
+        // Close the program if no editor windows are open.
+        if (ALL_OPEN_WINDOWS.isEmpty()) {
+            System.exit(0);
         }
     }
 
@@ -676,7 +777,7 @@ public class VideEditorWindow {
 
     private void updateWindowTitleWithFilename(File file) {
         String quotedFilename = "\"" + file.getAbsolutePath() + "\"";
-        videWindow.setTitle("VIDE - " + quotedFilename);
+        videWindow.setTitle("VIDE - " + quotedFilename + (edited ? " - edited" : ""));
     }
 
     /**
@@ -690,11 +791,37 @@ public class VideEditorWindow {
     }
 
     /**
+     * Performs the "Quit" menu action item.
+     * @return True if the result of this command means the Vide can be quit, else false.
+     */
+    public static boolean quit() {
+        // Close all windows.
+        VideEditorWindow editorWindow;
+        while ((editorWindow = ALL_OPEN_WINDOWS.peek()) != null) {
+            // Prompt the user to save the file if it has been edited.
+            if (editorWindow.edited) {
+                int result = editorWindow.close();
+                if (result == JOptionPane.CANCEL_OPTION) {
+                    // If cancel was selected, stop closing remaining files.
+                    break;
+                }
+            }
+            // If the file was not edited, just close the file.
+            else {
+                editorWindow.close();
+            }
+        }
+        // If there are no editor windows open, report the program should be quit.
+        return ALL_OPEN_WINDOWS.isEmpty();
+    }
+
+    /**
      * Performs the "Undo" menu item action.
      */
     public void undo() {
         if (undoHistory.canUndo()) {
             undoHistory.undo();
+            setEdited(undoHistory.getPosition() != undoHistoryUneditedPosition);
         }
     }
 
@@ -704,6 +831,7 @@ public class VideEditorWindow {
     public void redo() {
         if (undoHistory.canRedo()) {
             undoHistory.redo();
+            setEdited(undoHistory.getPosition() != undoHistoryUneditedPosition);
         }
     }
 
@@ -783,12 +911,13 @@ public class VideEditorWindow {
             // Update the editor's displayed colors.
             editorWindow.editorTheme = Vide.getEditorTheme();
             editorWindow.vikariSyntaxHighlighter = Vide.getSyntaxHighlighter();
-            syntaxHighlightDocumentListener.setSyntaxHighlighter(editorWindow.vikariSyntaxHighlighter);
+            editorWindow.syntaxHighlightDocumentListener.setSyntaxHighlighter(editorWindow.vikariSyntaxHighlighter);
 
             SwingUtilities.invokeLater(() -> {
                 editorWindow.updateComponentColors();
                 editorWindow.vikariSyntaxHighlighter.setEnabled(true);
-                editorWindow.vikariSyntaxHighlighter.highlightEntireFile(currentFilePath, fileContents, textEditorPane);
+                editorWindow.vikariSyntaxHighlighter.highlightEntireFile(editorWindow.currentFilePath,
+                        editorWindow.fileContents, editorWindow.textEditorPane);
             });
         }
     }
@@ -807,8 +936,11 @@ public class VideEditorWindow {
         statusLabel.setBackground(editorTheme.getStatusLabelBg());
         editorScrollPane.setForeground(editorTheme.getLineNumbersFg());
         editorScrollPane.setBackground(editorTheme.getLineNumbersBg());
-
-        editorScrollPane.setBorder(new EmptyBorder(0, 0, 0, 0));
+        UIManager.put("OptionPane.messageForeground", new ColorUIResource(editorTheme.getTextEditorFg()));
+        UIManager.put("OptionPane.background",new ColorUIResource(editorTheme.getLineNumbersBg()));
+        UIManager.put("OptionPane.foreground",new ColorUIResource(editorTheme.getLineNumbersFg()));
+        UIManager.put("Panel.background",new ColorUIResource(editorTheme.getLineNumbersBg()));
+        UIManager.put("Panel.foreground",new ColorUIResource(editorTheme.getLineNumbersFg()));
     }
 
     public void addInsertTextUndoHistoryItem(int startOffset, int length, String addedText) {

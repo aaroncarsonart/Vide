@@ -19,6 +19,10 @@ public class UndoHistory {
         this.historyItems = new ArrayList<>();
     }
 
+    public int getPosition() {
+        return position;
+    }
+
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }

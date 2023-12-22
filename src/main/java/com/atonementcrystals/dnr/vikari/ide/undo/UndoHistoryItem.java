@@ -6,10 +6,10 @@ import java.util.LinkedList;
  * Models one entry for the UndoHistory.
  */
 public class UndoHistoryItem {
-    private UndoHistoryItemType type;
+    private final UndoHistoryItemType type;
     private int startCursor;
     private int endCursor;
-    private LinkedList<Character> modifiedText;
+    private final LinkedList<Character> modifiedText;
     private boolean finished;
 
     public UndoHistoryItem(UndoHistoryItemType type, int startCursor, int endCursor, String edit) {
