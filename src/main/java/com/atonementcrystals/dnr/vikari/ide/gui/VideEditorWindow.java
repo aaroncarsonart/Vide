@@ -26,6 +26,7 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.desktop.QuitHandler;
 import java.awt.event.*;
 import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,14 +40,14 @@ import java.util.regex.Pattern;
 public class VideEditorWindow {
     private static final String NEW_FILE_TITLE = "VIDE - <New File>";
     private static final int DEFAULT_FONT_SIZE = 14;
-    private static final Font DEFAULT_FONT = new Font("Andale Mono", Font.PLAIN, DEFAULT_FONT_SIZE);
+    private static final Font DEFAULT_FONT = loadMonospaceFont();
     private static final int SHORTCUT_KEY_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
     public static final Stack<VideEditorWindow> ALL_OPEN_WINDOWS = new Stack<>();
     private static final Map<String, VideEditorWindow> ALL_OPEN_FILES = new HashMap<>();
     private static long NEW_FILE_INDEX = 0;
     private static final String NEW_FILE_PATH_PREFIX = "@-New-File-";
     private static QuitHandler quitHandler;
-
+;
     private final JFrame videWindow;
     private final VideWindowAdapter videWindowAdapter;
     private final JScrollPane editorScrollPane;
@@ -72,6 +73,17 @@ public class VideEditorWindow {
 
     private int linePosition;
     private int columnPosition;
+
+    private static Font loadMonospaceFont() {
+        try {
+            URL fontUrl = VideEditorWindow.class.getClassLoader().getResource("fonts/Inconsolata-Regular.ttf");
+            File fontFile = new File(fontUrl.getFile());
+            Font inconsolataFont = Font.createFont(Font.TRUETYPE_FONT, fontFile);
+            return inconsolataFont.deriveFont(DEFAULT_FONT_SIZE);
+        } catch (IOException | FontFormatException e) {
+            return new Font("Courier", Font.PLAIN, DEFAULT_FONT_SIZE);
+        }
+    }
 
     /**
      * The default editor window when the program is first launched.
@@ -292,7 +304,13 @@ public class VideEditorWindow {
             if (quitHandler == null) {
                 quitHandler = createVideQuitHandler();
                 Desktop desktop = Desktop.getDesktop();
-                desktop.setQuitHandler(quitHandler);
+                try {
+                    // Insure macOS Quit menu item functions as desired.
+                    desktop.setQuitHandler(quitHandler);
+                } catch (UnsupportedOperationException e) {
+                    // Ensure separate Quit menu item accelerator is set if not on macOS.
+                    quitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, SHORTCUT_KEY_MASK));
+                }
             }
         }
 
@@ -941,6 +959,25 @@ public class VideEditorWindow {
         UIManager.put("OptionPane.foreground",new ColorUIResource(editorTheme.getLineNumbersFg()));
         UIManager.put("Panel.background",new ColorUIResource(editorTheme.getLineNumbersBg()));
         UIManager.put("Panel.foreground",new ColorUIResource(editorTheme.getLineNumbersFg()));
+
+        // Update the Menu colors.
+        JMenuBar menuBar = videWindow.getJMenuBar();
+        menuBar.setForeground(editorTheme.getStatusLabelFg());
+        menuBar.setBackground(editorTheme.getStatusLabelBg());
+
+        for (int i = 0; i < menuBar.getMenuCount(); i++) {
+            JMenu menu = menuBar.getMenu(i);
+                menu.setForeground(editorTheme.getStatusLabelFg());
+                menu.setBackground(editorTheme.getStatusLabelBg());
+                menu.getPopupMenu().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1));
+
+                for (int j = 0; j < menu.getItemCount(); j++) {
+                    JMenuItem menuItem = menu.getItem(j);
+
+                    menuItem.setForeground(editorTheme.getStatusLabelFg());
+                    menuItem.setBackground(editorTheme.getStatusLabelBg());
+                }
+            }
     }
 
     public void addInsertTextUndoHistoryItem(int startOffset, int length, String addedText) {

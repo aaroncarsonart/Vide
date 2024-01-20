@@ -6,7 +6,7 @@
 
     <groupId>com.atonementcrystals</groupId>
     <artifactId>Vide</artifactId>
-    <version>0.3.2</version>
+    <version>0.3.3</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -79,6 +79,19 @@
                 </configuration>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>${project.basedir}</directory>
+                <includes>
+                    <include>LICENSE-inconsolata-font.txt</include>
+                </includes>
+                <targetPath>META-INF</targetPath>
+            </resource>
+        </resources>
     </build>
 
     <dependencies>
