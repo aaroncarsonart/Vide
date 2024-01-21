@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  */
 public class VideEditorWindow {
     private static final String NEW_FILE_TITLE = "VIDE - <New File>";
-    private static final int DEFAULT_FONT_SIZE = 14;
+    private static final int DEFAULT_FONT_SIZE = 16;
     private static final Font DEFAULT_FONT = loadMonospaceFont();
     private static final int SHORTCUT_KEY_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
     public static final Stack<VideEditorWindow> ALL_OPEN_WINDOWS = new Stack<>();
@@ -76,12 +76,18 @@ public class VideEditorWindow {
 
     private static Font loadMonospaceFont() {
         try {
-            URL fontUrl = VideEditorWindow.class.getClassLoader().getResource("fonts/Inconsolata-Regular.ttf");
-            File fontFile = new File(fontUrl.getFile());
-            Font inconsolataFont = Font.createFont(Font.TRUETYPE_FONT, fontFile);
-            return inconsolataFont.deriveFont(DEFAULT_FONT_SIZE);
+            ClassLoader classLoader = VideEditorWindow.class.getClassLoader();
+            InputStream inputStream = classLoader.getResourceAsStream("fonts/Inconsolata-Regular.ttf");
+
+            Font inconsolataFont = Font.createFont(Font.TRUETYPE_FONT, inputStream);
+            inconsolataFont = inconsolataFont.deriveFont((float) DEFAULT_FONT_SIZE);
+
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            ge.registerFont(inconsolataFont);
+
+            return inconsolataFont;
         } catch (IOException | FontFormatException e) {
-            return new Font("Courier", Font.PLAIN, DEFAULT_FONT_SIZE);
+            return new Font("Courier New", Font.PLAIN, DEFAULT_FONT_SIZE);
         }
     }
 
@@ -121,7 +127,7 @@ public class VideEditorWindow {
         lineNumbers.setFont(font);
         lineNumbers.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, fontWidth));
 
-        DefaultStyledDocument styledDocument = (DefaultStyledDocument)textEditorPane.getStyledDocument();
+        DefaultStyledDocument styledDocument = (DefaultStyledDocument) textEditorPane.getStyledDocument();
         styledDocument.setDocumentFilter(new TabsToSpacesDocumentFilter());
 
         undoHistory = new UndoHistory(styledDocument);
@@ -172,7 +178,7 @@ public class VideEditorWindow {
 
         statusLabel = new JTextArea();
         statusLabel.setBorder(new EmptyBorder(2, 2, 2, 2));
-        statusLabel.setFont(font.deriveFont(14.0f));
+        statusLabel.setFont(font);
         statusLabel.setEditable(false);
         contentPane.add(statusLabel, BorderLayout.SOUTH);
 
