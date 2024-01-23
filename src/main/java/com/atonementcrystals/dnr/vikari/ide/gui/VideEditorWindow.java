@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
  * A single Vide editor window instance.
  */
 public class VideEditorWindow {
-    private static final String NEW_FILE_TITLE = "VIDE - <New File>";
+    private static final String NEW_FILE_TITLE = Vide.APP_NAME + " - <New File>";
     private static final int DEFAULT_FONT_SIZE = 16;
     private static final Font DEFAULT_FONT = loadMonospaceFont();
     private static final int SHORTCUT_KEY_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
@@ -803,7 +803,7 @@ public class VideEditorWindow {
 
     private void updateWindowTitleWithFilename(File file) {
         String quotedFilename = "\"" + file.getAbsolutePath() + "\"";
-        videWindow.setTitle("VIDE - " + quotedFilename + (edited ? " - edited" : ""));
+        videWindow.setTitle(Vide.APP_NAME + " - " + quotedFilename + (edited ? " - edited" : ""));
     }
 
     /**

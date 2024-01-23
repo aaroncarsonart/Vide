@@ -20,6 +20,7 @@ import java.net.URL;
  * Main class of the Vikari IDE.
  */
 public class Vide {
+    public static final String APP_NAME = "Vide";
     private static VideEditorTheme videEditorTheme;
     private static VikariSyntaxHighlighter vikariSyntaxHighlighter;
     private static VideColorThemeProcessor videColorThemeProcessor;
@@ -154,8 +155,8 @@ public class Vide {
      */
     private static void setAppleLookAndFeel() {
         System.setProperty("apple.laf.useScreenMenuBar", "true");
-        System.setProperty("com.apple.mrj.application.apple.menu.about.name", "VIDE");
-        System.setProperty("apple.awt.application.name", "VIDE");
+        System.setProperty("com.apple.mrj.application.apple.menu.about.name", APP_NAME);
+        System.setProperty("apple.awt.application.name", APP_NAME);
         System.setProperty("apple.awt.application.appearance", "system");
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
