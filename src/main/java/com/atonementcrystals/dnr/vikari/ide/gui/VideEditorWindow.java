@@ -26,7 +26,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.desktop.QuitHandler;
 import java.awt.event.*;
 import java.io.*;
-import java.net.URL;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
@@ -113,6 +112,9 @@ public class VideEditorWindow {
         videWindowAdapter = new VideWindowAdapter();
         videWindow.addWindowListener(videWindowAdapter);
         videWindow.addWindowFocusListener(new VideWindowFocusListener());
+
+        Image iconImage = Vide.loadAppIconImage();
+        videWindow.setIconImage(iconImage);
 
         this.font = videFont;
         this.fontSize = videFont.getSize();

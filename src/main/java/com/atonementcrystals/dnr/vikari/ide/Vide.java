@@ -7,9 +7,13 @@ import com.atonementcrystals.dnr.vikari.ide.parsing.VideEditorTheme;
 import com.atonementcrystals.dnr.vikari.ide.parsing.VikariSyntaxHighlighter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.Image;
+import java.awt.Taskbar;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
 /**
@@ -27,6 +31,7 @@ public class Vide {
     public static void main(String[] args) {
         setAppleLookAndFeel();
         loadDefaultVideColorTheme();
+        setAppIconInTaskbar();
 
         // Open a single Vide editor window.
         if (args.length == 0) {
@@ -158,6 +163,43 @@ public class Vide {
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
                  UnsupportedLookAndFeelException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Load the app icon from the resources folder.
+     * @return The app icon as an image. Returns null if there was an error.
+     */
+    public static Image loadAppIconImage() {
+        String iconImagePath = "images/vide_icon-512x512.png";
+        ClassLoader classLoader = Vide.class.getClassLoader();
+        InputStream iconInputStream = classLoader.getResourceAsStream(iconImagePath);
+
+        if (iconInputStream != null) {
+            try {
+                return ImageIO.read(iconInputStream);
+            } catch (IOException e) {
+                System.out.println("IO error while reading file: \"" + iconImagePath + "\"");
+            }
+        } else {
+            System.out.println("File \"" + iconImagePath + "\" could not be loaded from resources.");
+        }
+
+        return null;
+    }
+
+    /**
+     * For the Apple look and feel on macOS, set the icon image in the Dock.
+     */
+    private static void setAppIconInTaskbar() {
+        Image iconImage = loadAppIconImage();
+        if (iconImage != null) {
+            try {
+                Taskbar taskbar = Taskbar.getTaskbar();
+                taskbar.setIconImage(iconImage);
+            } catch (UnsupportedOperationException | SecurityException e) {
+                // Silently fail for non-supported operating systems.
+            }
         }
     }
 }
