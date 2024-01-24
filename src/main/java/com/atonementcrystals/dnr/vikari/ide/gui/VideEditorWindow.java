@@ -532,7 +532,7 @@ public class VideEditorWindow {
     public void loadFile(File file) {
         this.currentFile = file;
         this.currentFilePath = getCanonicalFilePath(currentFile);
-        System.out.println(currentFilePath);
+
         try {
             fileContents = Files.readString(currentFile.toPath());
         } catch (IOException e) {

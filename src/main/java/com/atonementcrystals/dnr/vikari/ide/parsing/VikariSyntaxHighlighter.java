@@ -163,7 +163,8 @@ public class VikariSyntaxHighlighter {
 
             List<AtonementCrystal> row = rows.get(rowNumber);
             if (row == null) {
-                System.out.println("null row: " + rowNumber); continue;
+                System.out.println("null row: " + rowNumber);
+                continue;
             }
             for (int i = 0; i < row.size(); i++) {
                 AtonementCrystal crystal = row.get(i);
