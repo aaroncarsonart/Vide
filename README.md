@@ -43,7 +43,7 @@ Suggested usage of Vide is to alias the jar command in `.zshrc`.
 VIDE_PROJECT_DIR="~/code/java/Vide"
 
 # Fetch the most recent version of the jar build.
-alias vide="java -jar `ls -r ${VIDE_PROJECT_DIR}/target/Vide* | head -n1`"
+alias vide="java -jar `ls -r ${VIDE_PROJECT_DIR}/target/Vide*.jar | head -n1`"
 ```
 
 After aliasing Vide, the Vikari demo file as pictured in the screenshot above can be opened with the following command:
